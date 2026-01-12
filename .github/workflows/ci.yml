@@ -27,18 +27,13 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install --system -r requirements.txt
-          uv pip install --system pytest pytest-asyncio httpx
+          uv pip install --system pytest pytest-asyncio httpx ruff
 
-      - name: Lint with ruff (if available)
-        continue-on-error: true
-        run: |
-          uv pip install --system ruff
-          ruff check app/
+      - name: Lint with ruff
+        run: ruff check app/
 
       - name: Check formatting
-        continue-on-error: true
-        run: |
-          ruff format --check app/
+        run: ruff format --check app/
 
       - name: Run tests
         run: |

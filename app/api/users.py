@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, UserUpdate
@@ -41,11 +42,9 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
 
     # Check if email already exists for another user
     if user_update.email and user_update.email != user.email:
-        existing = db.query(User).filter(
-            User.email == user_update.email).first()
+        existing = db.query(User).filter(User.email == user_update.email).first()
         if existing:
-            raise HTTPException(
-                status_code=400, detail="Email already registered")
+            raise HTTPException(status_code=400, detail="Email already registered")
 
     # Update only provided fields
     update_data = user_update.model_dump(exclude_unset=True)
