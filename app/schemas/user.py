@@ -6,9 +6,12 @@ class UserCreate(BaseModel):
     name: str
 
 
-class UserRead(BaseModel):
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    name: str | None = None
+
+
+class UserRead(UserCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    email: EmailStr
-    name: str
