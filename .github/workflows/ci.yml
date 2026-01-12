@@ -3,10 +3,10 @@ name: CI - Test and Lint
 on:
   pull_request:
     branches:
-      - main
+      - master
   push:
     branches-ignore:
-      - main
+      - master
 
 jobs:
   test:
