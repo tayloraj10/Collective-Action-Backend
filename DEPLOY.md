@@ -108,7 +108,7 @@ gcloud services enable sqladmin.googleapis.com run.googleapis.com cloudbuild.goo
 
 # Create Cloud SQL instance (takes ~5 minutes)
 gcloud sql instances create collective-action-db \
-  --database-version=POSTGRES_16 \
+  --database-version=POSTGRES_17 \
   --tier=db-f1-micro \
   --region=us-central1 \
   --root-password=YOUR_SECURE_PASSWORD
