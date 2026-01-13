@@ -1,3 +1,5 @@
+import os
+import re
 from pydantic_settings import BaseSettings
 
 
@@ -14,3 +16,18 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Debug print for DATABASE_URL (mask password)
+
+
+def mask_url_password(url):
+    return re.sub(r'(://[^:]+:)([^@]+)(@)', r'\1***\3', url)
+
+
+print("[DEBUG] DATABASE_URL:", mask_url_password(settings.DATABASE_URL))
+
+# Print DB_PASSWORD (masked) for debugging Secret Manager injection
+db_password = os.environ.get("DB_PASSWORD", "<not set>")
+masked_pw = db_password[:2] + \
+    "***" if db_password and db_password != "<not set>" else db_password
+print(f"[DEBUG] DB_PASSWORD: {masked_pw}")
