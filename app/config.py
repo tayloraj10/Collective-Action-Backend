@@ -1,31 +1,21 @@
 import os
 import re
-
-# Build DATABASE_URL at runtime from environment variables
-
-
-def get_env(key, default=None):
-    return os.environ.get(key, default)
+from pydantic_settings import BaseSettings
 
 
-POSTGRES_DB = get_env("POSTGRES_DB", "app_db")
-POSTGRES_USER = get_env("POSTGRES_USER", "app_user")
-POSTGRES_PASSWORD = get_env("DB_PASSWORD", get_env(
-    "POSTGRES_PASSWORD", "app_password"))
-POSTGRES_HOST = get_env("POSTGRES_HOST", "db")
-POSTGRES_PORT = get_env("POSTGRES_PORT", "5432")
+class Settings(BaseSettings):
+    DATABASE_URL: str
+    POSTGRES_DB: str = "app_db"
+    POSTGRES_USER: str = "app_user"
+    POSTGRES_PASSWORD: str = "app_password"
+    POSTGRES_HOST: str = "db"
+    POSTGRES_PORT: int = 5432
 
-# For Cloud Run/Cloud SQL socket
-CLOUDSQL_CONNECTION = get_env("CLOUDSQL_CONNECTION")
-if CLOUDSQL_CONNECTION:
-    DB_HOST = f"/cloudsql/{CLOUDSQL_CONNECTION}"
-else:
-    DB_HOST = POSTGRES_HOST
+    class Config:
+        env_file = ".env"
 
-if DB_HOST.startswith("/cloudsql/"):
-    DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@/{POSTGRES_DB}?host={DB_HOST}"
-else:
-    DATABASE_URL = f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{DB_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+
+settings = Settings()
 
 # Debug print for DATABASE_URL (mask password)
 
