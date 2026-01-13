@@ -54,7 +54,8 @@ jobs:
             --region ${{ env.REGION }} \
             --allow-unauthenticated \
             --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ env.CLOUD_SQL_INSTANCE }} \
-            --set-env-vars DATABASE_URL="postgresql+psycopg2://postgres:${{ secrets.db_password }}@/app_db?host=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ env.CLOUD_SQL_INSTANCE }}" \
+            --set-secrets DB_PASSWORD=projects/${{ env.PROJECT_ID }}/secrets/db_password:latest \
+            --set-env-vars DATABASE_URL="postgresql+psycopg2://postgres:\${DB_PASSWORD}@/app_db?host=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ env.CLOUD_SQL_INSTANCE }}" \
             --max-instances 10 \
             --min-instances 0 \
             --memory 512Mi \
