@@ -2,7 +2,6 @@
 .venv
 __pycache__
 *.pyc
-*.pyo
 *.pyd
 .Python
 *.so
@@ -19,5 +18,4 @@ Thumbs.db
 docker-compose.yml
 Dockerfile.dev
 README.md
-uv.lock
 .python-version
