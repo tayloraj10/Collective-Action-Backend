@@ -16,14 +16,13 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        # Cloud Run / DATABASE_URL takes precedence
         if self.DATABASE_URL:
+            # If password is missing, insert it from DB_PASSWORD
+            if self.DB_PASSWORD and "@" in self.DATABASE_URL and self.DATABASE_URL.startswith(f"postgresql+psycopg2://{self.POSTGRES_USER}:@"):
+                return self.DATABASE_URL.replace(f"{self.POSTGRES_USER}:@", f"{self.POSTGRES_USER}:{self.DB_PASSWORD}@", 1)
             return self.DATABASE_URL
         password = self.DB_PASSWORD or self.POSTGRES_PASSWORD
-        return (
-            f"postgresql+psycopg2://{self.POSTGRES_USER}:{password}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+        return f"postgresql+psycopg2://{self.POSTGRES_USER}:{password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
 
 settings = Settings()
