@@ -1,13 +1,13 @@
 import os
-from pydantic_settings import BaseSettings
 import re
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     POSTGRES_DB: str = os.environ.get("POSTGRES_DB", "app_db")
     POSTGRES_USER: str = os.environ.get("POSTGRES_USER", "app_user")
-    POSTGRES_PASSWORD: str = os.environ.get(
-        "POSTGRES_PASSWORD", "app_password")
+    POSTGRES_PASSWORD: str = os.environ.get("POSTGRES_PASSWORD", "app_password")
     POSTGRES_HOST: str = os.environ.get("POSTGRES_HOST", "localhost")
     POSTGRES_PORT: int = int(os.environ.get("POSTGRES_PORT", 5432))
 
@@ -40,6 +40,5 @@ def mask_url_password(url: str) -> str:
 
 
 print("[DEBUG] DATABASE_URL:", mask_url_password(settings.database_url))
-masked_pw = settings.DB_PASSWORD[:2] + \
-    "***" if settings.DB_PASSWORD else "<not set>"
+masked_pw = settings.DB_PASSWORD[:2] + "***" if settings.DB_PASSWORD else "<not set>"
 print(f"[DEBUG] DB_PASSWORD: {masked_pw}")
