@@ -52,7 +52,6 @@ jobs:
             --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             --platform managed \
             --region ${{ env.REGION }} \
-            --allow-unauthenticated \
             --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ env.CLOUD_SQL_INSTANCE }} \
             --set-env-vars DATABASE_URL="postgresql+psycopg2://postgres@/postgres?host=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ env.CLOUD_SQL_INSTANCE }}" \
             --set-secrets DB_PASSWORD=db_password:latest
