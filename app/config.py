@@ -9,20 +9,20 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    POSTGRES_DB: str = "app_db"
-    POSTGRES_USER: str = "app_user"
-    POSTGRES_PASSWORD: str = "app_password"
-    POSTGRES_HOST: str = "db"
-    POSTGRES_PORT: int = 5432
+    POSTGRES_DB: str = os.environ.get("POSTGRES_DB", "app_db")
+    POSTGRES_USER: str = os.environ.get("POSTGRES_USER", "app_user")
+    POSTGRES_PASSWORD: str = os.environ.get(
+        "POSTGRES_PASSWORD", "app_password")
+    POSTGRES_HOST: str = os.environ.get("POSTGRES_HOST", "localhost")
+    POSTGRES_PORT: int = int(os.environ.get("POSTGRES_PORT", 5432))
+    DB_PASSWORD: str = os.environ.get("DB_PASSWORD", "")
 
     @property
     def database_url(self) -> str:
-        # Use env DATABASE_URL if set, else build from POSTGRES_* vars
-        url = os.environ.get("DATABASE_URL")
-        if url:
-            return url
+        # Always build DATABASE_URL from individual env vars
+        password = self.DB_PASSWORD or self.POSTGRES_PASSWORD
         return (
-            f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            f"postgresql+psycopg2://{self.POSTGRES_USER}:{password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         )
 
 
