@@ -1,15 +1,17 @@
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from uuid import UUID
 
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import UserSchema
+from app.schemas.user import UserSchema, UserCreate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.post("/", response_model=UserSchema)
-def create_user(user: UserSchema, db: Session = Depends(get_db)):
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """
     Create a new user in the database.
     Validates required fields and checks for duplicate emails.
@@ -24,9 +26,7 @@ def create_user(user: UserSchema, db: Session = Depends(get_db)):
     db_user = UserModel(
         email=user.email,
         name=user.name,
-        photo_url=user.photo_url,
-        user_type=user.user_type or "person",
-        is_active=user.is_active if user.is_active is not None else True
+        photo_url=user.photo_url
     )
     db.add(db_user)
     db.commit()
@@ -43,7 +43,7 @@ def list_users(db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}", response_model=UserSchema)
-def get_user(user_id: int, db: Session = Depends(get_db)):
+def get_user(user_id: UUID, db: Session = Depends(get_db)):
     """
     Retrieve a user by their unique ID.
     Raises 404 if the user is not found.
@@ -55,7 +55,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{user_id}", response_model=UserSchema)
-def update_user(user_id: int, user_update: UserSchema, db: Session = Depends(get_db)):
+def update_user(user_id: UUID, user_update: UserCreate, db: Session = Depends(get_db)):
     """
     Update an existing user's information.
     Checks for email uniqueness and applies partial updates.
@@ -84,7 +84,7 @@ def update_user(user_id: int, user_update: UserSchema, db: Session = Depends(get
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int, db: Session = Depends(get_db)):
+def delete_user(user_id: UUID, db: Session = Depends(get_db)):
     """
     Delete a user by their unique ID.
     Raises 404 if the user is not found.

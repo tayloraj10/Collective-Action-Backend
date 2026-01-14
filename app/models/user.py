@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 from sqlalchemy import DateTime, Boolean, func
@@ -7,7 +7,8 @@ from sqlalchemy import DateTime, Boolean, func
 class User(Base):
     __tablename__ = "users"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=True), primary_key=True,
+                                    unique=True, nullable=False, server_default=func.gen_random_uuid())
     email: Mapped[str] = mapped_column(
         String(255), unique=True, index=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
