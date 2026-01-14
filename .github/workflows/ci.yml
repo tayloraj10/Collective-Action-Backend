@@ -64,7 +64,7 @@ jobs:
 
       - name: Test Docker image runs
         run: |
-          docker run -d -p 8000:8000 \
+          docker run -d -p 8000:8080 \
             -e DATABASE_URL="postgresql+psycopg2://postgres:testpass@172.17.0.1:5432/testdb" \
             --name test-container test-image
           sleep 10
