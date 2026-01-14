@@ -53,7 +53,12 @@ gcloud run deploy collective-action-backend \
   --image gcr.io/PROJECT_ID/collective-action-backend \
   --region us-central1
 ```
-
+Required IAM roles for the service account:
+- roles/run.admin
+- roles/storage.admin
+- roles/cloudsql.client
+- roles/secretmanager.secretAccessor
+- roles/iam.serviceAccountUser
 ### Delete Resources
 ```bash
 gcloud run services delete collective-action-backend --region=us-central1
