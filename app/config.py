@@ -17,21 +17,26 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         if self.DATABASE_URL:
-            # If password is missing, insert it from DB_PASSWORD
-            if self.DB_PASSWORD and "@" in self.DATABASE_URL and self.DATABASE_URL.startswith(f"postgresql+psycopg2://{self.POSTGRES_USER}:@"):
-                return self.DATABASE_URL.replace(f"{self.POSTGRES_USER}:@", f"{self.POSTGRES_USER}:{self.DB_PASSWORD}@", 1)
+            if self.DB_PASSWORD:
+                # Split at the @ to inject the password
+                protocol_and_user, rest = self.DATABASE_URL.split("@", 1)
+                return f"{protocol_and_user}:{self.DB_PASSWORD}@{rest}"
             return self.DATABASE_URL
+
         password = self.DB_PASSWORD or self.POSTGRES_PASSWORD
-        return f"postgresql+psycopg2://{self.POSTGRES_USER}:{password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return (
+            f"postgresql+psycopg2://{self.POSTGRES_USER}:{password}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
 
 
 settings = Settings()
 
-# Debug info
 
-
-def mask_url_password(url):
-    return re.sub(r'(://[^:]+:)([^@]+)(@)', r'\1***\3', url)
+# Debug helpers
+def mask_url_password(url: str) -> str:
+    """Masks password in a URL for logging"""
+    return re.sub(r"(://[^:]+:)([^@]+)(@)", r"\1***\3", url)
 
 
 print("[DEBUG] DATABASE_URL:", mask_url_password(settings.database_url))
