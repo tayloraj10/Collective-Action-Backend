@@ -25,7 +25,8 @@ jobs:
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
 
       - name: Install dependencies
-        run: uv pip install --system
+        run: uv pip install --system --editable .
+        working-directory: ${{ github.workspace }}
 
       - name: Lint with ruff
         run: ruff check app/
@@ -40,6 +41,20 @@ jobs:
   docker-build:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,6 +64,9 @@ jobs:
 
       - name: Test Docker image runs
         run: |
-          docker run -d -p 8000:8000 -e DATABASE_URL=sqlite:///./test.db test-image
-          sleep 5
+          docker run -d -p 8000:8080 \
+            -e DATABASE_URL="postgresql+psycopg2://postgres:testpass@172.17.0.1:5432/testdb" \
+            --name test-container test-image
+          sleep 10
+          docker logs test-container
           curl -f http://localhost:8000/health || exit 1
