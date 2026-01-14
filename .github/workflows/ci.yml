@@ -26,6 +26,7 @@ jobs:
 
       - name: Install dependencies
         run: uv pip install --system --all-extras --editable .
+        working-directory: ${{ github.workspace }}
 
       - name: Lint with ruff
         run: ruff check app/
