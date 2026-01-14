@@ -18,9 +18,9 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         if self.DATABASE_URL:
             if self.DB_PASSWORD:
-                # Split at the @ to inject the password
-                protocol_and_user, rest = self.DATABASE_URL.split("@", 1)
-                return f"{protocol_and_user}:{self.DB_PASSWORD}@{rest}"
+                if ":" not in self.DATABASE_URL.split("//")[1].split("@")[0]:
+                    protocol_and_user, rest = self.DATABASE_URL.split("@", 1)
+                    return f"{protocol_and_user}:{self.DB_PASSWORD}@{rest}"
             return self.DATABASE_URL
 
         password = self.DB_PASSWORD or self.POSTGRES_PASSWORD
