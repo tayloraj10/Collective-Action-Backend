@@ -26,7 +26,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = UserModel(
         email=user.email,
         name=user.name,
-        photo_url=user.photo_url
+        photo_url=user.photo_url,
+        firebase_user_id=user.firebase_user_id
     )
     db.add(db_user)
     db.commit()
