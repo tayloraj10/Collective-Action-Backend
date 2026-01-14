@@ -2,54 +2,81 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.user import User
-from app.schemas.user import UserCreate, UserRead, UserUpdate
+from app.models.user import User as UserModel
+from app.schemas.user import UserSchema
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("/", response_model=UserRead)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == user.email).first()
+@router.post("/", response_model=UserSchema)
+def create_user(user: UserSchema, db: Session = Depends(get_db)):
+    """
+    Create a new user in the database.
+    Validates required fields and checks for duplicate emails.
+    """
+    if not user.email or not user.name:
+        raise HTTPException(
+            status_code=422, detail="Email and name are required")
+    existing = db.query(UserModel).filter(
+        UserModel.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-
-    db_user = User(email=user.email, name=user.name)
+    db_user = UserModel(
+        email=user.email,
+        name=user.name,
+        photo_url=user.photo_url,
+        user_type=user.user_type or "person",
+        is_active=user.is_active if user.is_active is not None else True
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
 
-@router.get("/", response_model=list[UserRead])
+@router.get("/", response_model=list[UserSchema])
 def list_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
+    """
+    Retrieve a list of all users from the database.
+    """
+    return db.query(UserModel).all()
 
 
-@router.get("/{user_id}", response_model=UserRead)
+@router.get("/{user_id}", response_model=UserSchema)
 def get_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+    """
+    Retrieve a user by their unique ID.
+    Raises 404 if the user is not found.
+    """
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
-@router.patch("/{user_id}", response_model=UserRead)
-def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+@router.patch("/{user_id}", response_model=UserSchema)
+def update_user(user_id: int, user_update: UserSchema, db: Session = Depends(get_db)):
+    """
+    Update an existing user's information.
+    Checks for email uniqueness and applies partial updates.
+    Raises 404 if the user is not found.
+    """
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     # Check if email already exists for another user
     if user_update.email and user_update.email != user.email:
-        existing = db.query(User).filter(User.email == user_update.email).first()
+        existing = db.query(UserModel).filter(
+            UserModel.email == user_update.email).first()
         if existing:
-            raise HTTPException(status_code=400, detail="Email already registered")
+            raise HTTPException(
+                status_code=400, detail="Email already registered")
 
-    # Update only provided fields
     update_data = user_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(user, field, value)
+        if field != "id":
+            setattr(user, field, value)
 
     db.commit()
     db.refresh(user)
@@ -58,10 +85,13 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+    """
+    Delete a user by their unique ID.
+    Raises 404 if the user is not found.
+    """
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
     db.delete(user)
     db.commit()
     return None
