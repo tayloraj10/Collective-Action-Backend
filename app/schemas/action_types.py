@@ -3,15 +3,15 @@ from uuid import UUID
 from enum import Enum
 
 
-# class ActionTypeValuesEnum(str, Enum):
-#     initative = "Initiative"
-#     map_submission = "Map Submission"
+class ActionTypeValuesEnum(str, Enum):
+    initative = "Initiative"
+    map_submission = "Map Submission"
 
 
 class ActionTypeSchema(BaseModel):
     id: UUID | None = None
-    name: str
+    name: ActionTypeValuesEnum
 
 
 class ActionTypeCreate(BaseModel):
-    name: str
+    name: ActionTypeValuesEnum
