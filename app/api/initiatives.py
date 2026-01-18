@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.initiative import Initiative
+from app.models.status import Status
 from app.schemas.initiative import InitiativeSchema, InitiativeCreateSchema
 from uuid import UUID
+
+from app.schemas.status import StatusTypeEnum, StatusValuesEnum
 
 router = APIRouter(prefix="/initiatives", tags=["initiatives"])
 
@@ -24,7 +27,11 @@ def list_initiatives(db: Session = Depends(get_db)):
 
 @router.get("/active", response_model=list[InitiativeSchema])
 def list_active_initiatives(db: Session = Depends(get_db)):
-    return db.query(Initiative).filter(Initiative.is_active == True).all()
+    active_status = db.query(Status).filter(
+        Status.name == StatusValuesEnum.active and Status.status_type == StatusTypeEnum.status).first()
+    if not active_status:
+        return []
+    return db.query(Initiative).filter(Initiative.status_id == active_status.id).all()
 
 
 @router.get("/{initiative_id}", response_model=InitiativeSchema)
