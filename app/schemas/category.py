@@ -3,18 +3,18 @@ from uuid import UUID
 from enum import Enum
 
 
-class CategoryValuesEnum(str, Enum):
-    environment = "Environment"
-    nature = "Nature"
-    trash = "Trash"
-    animals = "Animals"
-    fitness = "Fitness"
+# class CategoryValuesEnum(str, Enum):
+#     environment = "Environment"
+#     nature = "Nature"
+#     trash = "Trash"
+#     animals = "Animals"
+#     fitness = "Fitness"
 
 
 class CategorySchema(BaseModel):
     id: UUID | None = None
-    name: CategoryValuesEnum
+    name: str
 
 
 class CategoryCreate(BaseModel):
-    name: CategoryValuesEnum
+    name: str

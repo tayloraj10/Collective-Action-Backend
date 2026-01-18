@@ -3,17 +3,17 @@ from uuid import UUID
 from enum import Enum
 
 
-class StatusValuesEnum(str, Enum):
-    in_progress = "In Progress"
-    completed = "Completed"
-    active = "Active"
-    inactive = "Inactive"
+# class StatusValuesEnum(str, Enum):
+#     in_progress = "In Progress"
+#     completed = "Completed"
+#     active = "Active"
+#     inactive = "Inactive"
 
 
 class StatusSchema(BaseModel):
     id: UUID | None = None
-    name: StatusValuesEnum
+    name: str
 
 
 class StatusCreate(BaseModel):
-    name: StatusValuesEnum
+    name: str
