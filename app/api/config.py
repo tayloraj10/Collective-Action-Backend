@@ -60,7 +60,7 @@ def delete_category(category_id: str, db: Session = Depends(get_db)):
 # Status Endpoints
 @statuses_router.post("/", response_model=StatusSchema)
 def create_status(status: StatusCreate, db: Session = Depends(get_db)):
-    db_status = Status(name=status.name)
+    db_status = Status(name=status.name, status_type=status.status_type)
     db.add(db_status)
     db.commit()
     db.refresh(db_status)
@@ -80,12 +80,22 @@ def get_status(status_id: str, db: Session = Depends(get_db)):
     return status
 
 
+@statuses_router.get("/by_type/{status_type}", response_model=list[StatusSchema])
+def get_statuses_by_type(status_type: str, db: Session = Depends(get_db)):
+    statuses = db.query(Status).filter(Status.status_type == status_type).all()
+    if not statuses:
+        raise HTTPException(
+            status_code=404, detail="No statuses found for this type")
+    return statuses
+
+
 @statuses_router.put("/{status_id}", response_model=StatusSchema)
 def update_status(status_id: str, status: StatusCreate, db: Session = Depends(get_db)):
     db_status = db.query(Status).get(status_id)
     if not db_status:
         raise HTTPException(status_code=404, detail="Status not found")
     db_status.name = status.name
+    db_status.status_type = status.status_type
     db.commit()
     db.refresh(db_status)
     return db_status

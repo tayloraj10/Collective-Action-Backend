@@ -10,4 +10,5 @@ class Status(Base):
 
     id: Mapped[str] = mapped_column(Uuid(
         as_uuid=True), primary_key=True, nullable=False, default=uuid.uuid4)
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    status_type: Mapped[str] = mapped_column(String(100), nullable=False)
