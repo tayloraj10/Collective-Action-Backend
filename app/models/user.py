@@ -8,7 +8,7 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(Uuid(as_uuid=True), primary_key=True,
-                                    unique=True, nullable=False, server_default=func.gen_random_uuid())
+                                    nullable=False, server_default=func.gen_random_uuid())
     firebase_user_id: Mapped[str | None] = mapped_column(
         String(128), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(

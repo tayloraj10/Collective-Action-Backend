@@ -8,7 +8,7 @@ class Action(Base):
     __tablename__ = "actions"
 
     id: Mapped[str] = mapped_column(Uuid(
-        as_uuid=True), primary_key=True, unique=True, nullable=False, default=uuid.uuid4)
+        as_uuid=True), primary_key=True, nullable=False, default=uuid.uuid4)
     linked_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=True), nullable=True)
     action_type: Mapped[str] = mapped_column(String(100), nullable=False)
