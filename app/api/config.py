@@ -8,12 +8,13 @@ from app.schemas.category import CategorySchema, CategoryCreate
 from app.schemas.status import StatusSchema, StatusCreate
 from app.schemas.action_types import ActionTypeSchema, ActionTypeCreate
 
-router = APIRouter(prefix="/config", tags=["config"])
+categories_router = APIRouter(prefix="/categories", tags=["categories"])
+statuses_router = APIRouter(prefix="/statuses", tags=["statuses"])
+action_types_router = APIRouter(prefix="/action_types", tags=["action_types"])
+
 
 # Category Endpoints
-
-
-@router.post("/categories", response_model=CategorySchema)
+@categories_router.post("/", response_model=CategorySchema)
 def create_category(category: CategoryCreate, db: Session = Depends(get_db)):
     db_category = Category(name=category.name)
     db.add(db_category)
@@ -22,12 +23,12 @@ def create_category(category: CategoryCreate, db: Session = Depends(get_db)):
     return db_category
 
 
-@router.get("/categories", response_model=list[CategorySchema])
+@categories_router.get("/", response_model=list[CategorySchema])
 def list_categories(db: Session = Depends(get_db)):
     return db.query(Category).all()
 
 
-@router.get("/categories/{category_id}", response_model=CategorySchema)
+@categories_router.get("/{category_id}", response_model=CategorySchema)
 def get_category(category_id: str, db: Session = Depends(get_db)):
     category = db.query(Category).get(category_id)
     if not category:
@@ -35,7 +36,7 @@ def get_category(category_id: str, db: Session = Depends(get_db)):
     return category
 
 
-@router.put("/categories/{category_id}", response_model=CategorySchema)
+@categories_router.put("/{category_id}", response_model=CategorySchema)
 def update_category(category_id: str, category: CategoryCreate, db: Session = Depends(get_db)):
     db_category = db.query(Category).get(category_id)
     if not db_category:
@@ -46,7 +47,7 @@ def update_category(category_id: str, category: CategoryCreate, db: Session = De
     return db_category
 
 
-@router.delete("/categories/{category_id}")
+@categories_router.delete("/{category_id}")
 def delete_category(category_id: str, db: Session = Depends(get_db)):
     db_category = db.query(Category).get(category_id)
     if not db_category:
@@ -55,10 +56,9 @@ def delete_category(category_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"detail": "Category deleted"}
 
+
 # Status Endpoints
-
-
-@router.post("/statuses", response_model=StatusSchema)
+@statuses_router.post("/", response_model=StatusSchema)
 def create_status(status: StatusCreate, db: Session = Depends(get_db)):
     db_status = Status(name=status.name)
     db.add(db_status)
@@ -67,12 +67,12 @@ def create_status(status: StatusCreate, db: Session = Depends(get_db)):
     return db_status
 
 
-@router.get("/statuses", response_model=list[StatusSchema])
+@statuses_router.get("/", response_model=list[StatusSchema])
 def list_statuses(db: Session = Depends(get_db)):
     return db.query(Status).all()
 
 
-@router.get("/statuses/{status_id}", response_model=StatusSchema)
+@statuses_router.get("/{status_id}", response_model=StatusSchema)
 def get_status(status_id: str, db: Session = Depends(get_db)):
     status = db.query(Status).get(status_id)
     if not status:
@@ -80,7 +80,7 @@ def get_status(status_id: str, db: Session = Depends(get_db)):
     return status
 
 
-@router.put("/statuses/{status_id}", response_model=StatusSchema)
+@statuses_router.put("/{status_id}", response_model=StatusSchema)
 def update_status(status_id: str, status: StatusCreate, db: Session = Depends(get_db)):
     db_status = db.query(Status).get(status_id)
     if not db_status:
@@ -91,7 +91,7 @@ def update_status(status_id: str, status: StatusCreate, db: Session = Depends(ge
     return db_status
 
 
-@router.delete("/statuses/{status_id}")
+@statuses_router.delete("/{status_id}")
 def delete_status(status_id: str, db: Session = Depends(get_db)):
     db_status = db.query(Status).get(status_id)
     if not db_status:
@@ -100,10 +100,9 @@ def delete_status(status_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"detail": "Status deleted"}
 
+
 # ActionTypes Endpoints
-
-
-@router.post("/action_types", response_model=ActionTypeSchema)
+@action_types_router.post("/", response_model=ActionTypeSchema)
 def create_action_type(action_type: ActionTypeCreate, db: Session = Depends(get_db)):
     db_action_type = ActionTypes(name=action_type.name)
     db.add(db_action_type)
@@ -112,12 +111,12 @@ def create_action_type(action_type: ActionTypeCreate, db: Session = Depends(get_
     return db_action_type
 
 
-@router.get("/action_types", response_model=list[ActionTypeSchema])
+@action_types_router.get("/", response_model=list[ActionTypeSchema])
 def list_action_types(db: Session = Depends(get_db)):
     return db.query(ActionTypes).all()
 
 
-@router.get("/action_types/{action_type_id}", response_model=ActionTypeSchema)
+@action_types_router.get("/{action_type_id}", response_model=ActionTypeSchema)
 def get_action_type(action_type_id: str, db: Session = Depends(get_db)):
     action_type = db.query(ActionTypes).get(action_type_id)
     if not action_type:
@@ -125,7 +124,7 @@ def get_action_type(action_type_id: str, db: Session = Depends(get_db)):
     return action_type
 
 
-@router.put("/action_types/{action_type_id}", response_model=ActionTypeSchema)
+@action_types_router.put("/{action_type_id}", response_model=ActionTypeSchema)
 def update_action_type(action_type_id: str, action_type: ActionTypeCreate, db: Session = Depends(get_db)):
     db_action_type = db.query(ActionTypes).get(action_type_id)
     if not db_action_type:
@@ -136,7 +135,7 @@ def update_action_type(action_type_id: str, action_type: ActionTypeCreate, db: S
     return db_action_type
 
 
-@router.delete("/action_types/{action_type_id}")
+@action_types_router.delete("/{action_type_id}")
 def delete_action_type(action_type_id: str, db: Session = Depends(get_db)):
     db_action_type = db.query(ActionTypes).get(action_type_id)
     if not db_action_type:
