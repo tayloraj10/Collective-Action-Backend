@@ -1,11 +1,11 @@
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from uuid import UUID
 
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import UserSchema, UserCreate
+from app.schemas.user import UserCreate, UserSchema
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -17,16 +17,15 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     Validates required fields and checks for duplicate emails.
     """
     if not user.email or not user.name:
-        raise HTTPException(
-            status_code=422, detail="Email and name are required")
-    existing = db.query(UserModel).filter(
-        UserModel.email == user.email).first()
+        raise HTTPException(status_code=422, detail="Email and name are required")
+    existing = db.query(UserModel).filter(UserModel.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     db_user = UserModel(
         email=user.email,
         name=user.name,
-        photo_url=user.photo_url
+        photo_url=user.photo_url,
+        firebase_user_id=user.firebase_user_id,
     )
     db.add(db_user)
     db.commit()
@@ -67,11 +66,9 @@ def update_user(user_id: UUID, user_update: UserCreate, db: Session = Depends(ge
 
     # Check if email already exists for another user
     if user_update.email and user_update.email != user.email:
-        existing = db.query(UserModel).filter(
-            UserModel.email == user_update.email).first()
+        existing = db.query(UserModel).filter(UserModel.email == user_update.email).first()
         if existing:
-            raise HTTPException(
-                status_code=400, detail="Email already registered")
+            raise HTTPException(status_code=400, detail="Email already registered")
 
     update_data = user_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
