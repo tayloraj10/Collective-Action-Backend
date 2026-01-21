@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.action import Action
 from app.schemas.action import ActionSchema, ActionCreateSchema
 from uuid import UUID
+from app.schemas.action_types import ActionTypeValuesEnum
 
 router = APIRouter(prefix="/actions", tags=["actions"])
 
@@ -25,6 +27,19 @@ def list_actions(db: Session = Depends(get_db), limit: int = None):
     return query.all()
 
 
+@router.get("/recent", response_model=list[ActionSchema])
+def get_latest_action(db: Session = Depends(get_db), days: int = 7, action_type: ActionTypeValuesEnum = None):
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+    query = db.query(Action).filter(Action.date >= cutoff_date)
+    if action_type:
+        query = query.filter(Action.action_type == action_type)
+    latest_actions = query.order_by(Action.date.desc()).all()
+    if not latest_actions:
+        raise HTTPException(
+            status_code=404, detail=f"No actions found in the last {days} days with action_type '{action_type}'" if action_type else f"No actions found in the last {days} days")
+    return latest_actions
+
+
 @router.get("/{action_id}", response_model=ActionSchema)
 def get_action(action_id: UUID, db: Session = Depends(get_db)):
     action = db.query(Action).filter(Action.id == action_id).first()
@@ -33,8 +48,18 @@ def get_action(action_id: UUID, db: Session = Depends(get_db)):
     return action
 
 
-@router.get("/by_initiative/{initiative_id}", response_model=list[ActionSchema])
-def get_actions_by_initiative(initiative_id: UUID, db: Session = Depends(get_db)):
-    actions = db.query(Action).filter(Action.initiative_id ==
-                                      initiative_id).order_by(Action.created_at.desc()).all()
+@router.get("/by_linked/{linked_id}", response_model=list[ActionSchema])
+def get_actions_by_linked(linked_id: UUID, db: Session = Depends(get_db)):
+    actions = db.query(Action).filter(Action.linked_id ==
+                                      linked_id).order_by(Action.date.desc()).all()
     return actions
+
+
+@router.delete("/{action_id}", response_model=ActionSchema)
+def delete_action(action_id: UUID, db: Session = Depends(get_db)):
+    action = db.query(Action).filter(Action.id == action_id).first()
+    if not action:
+        raise HTTPException(status_code=404, detail="Action not found")
+    db.delete(action)
+    db.commit()
+    return action

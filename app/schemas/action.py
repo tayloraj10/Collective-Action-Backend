@@ -7,12 +7,11 @@ import uuid
 class ActionSchema(BaseModel):
     id: uuid.UUID
     action_type: str
-    amount: Optional[int] = None
+    amount: Optional[float] = None
     date: datetime
     image_url: Optional[str] = None
-    initiative_id: Optional[uuid.UUID] = None
-    user_id: uuid.UUID
-    extra_data: Optional[dict] = None
+    linked_id: Optional[uuid.UUID] = None
+    user_id: Optional[uuid.UUID] = None
 
     class Config:
         from_attributes = True
@@ -20,9 +19,7 @@ class ActionSchema(BaseModel):
 
 class ActionCreateSchema(BaseModel):
     action_type: str
-    amount: Optional[int] = None
-    date: datetime
+    amount: Optional[float] = None
     image_url: Optional[str] = None
-    initiative_id: Optional[str] = None
-    user_id: str
-    extra_data: Optional[dict] = None
+    linked_id: Optional[uuid.UUID] = None
+    user_id: Optional[uuid.UUID] = None

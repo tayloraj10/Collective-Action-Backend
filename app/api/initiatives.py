@@ -34,6 +34,11 @@ def list_active_initiatives(db: Session = Depends(get_db)):
     return db.query(Initiative).filter(Initiative.status_id == active_status.id).all()
 
 
+@router.get("/summary", response_model=list[InitiativeSchema])
+def list_initiatives_summary(db: Session = Depends(get_db)):
+    return db.query(Initiative).all()
+
+
 @router.get("/{initiative_id}", response_model=InitiativeSchema)
 def get_initiative(initiative_id: UUID, db: Session = Depends(get_db)):
     initiative = db.query(Initiative).filter(
