@@ -58,13 +58,14 @@ def get_featured_initiatives(db: Session = Depends(get_db)):
     recent_action_initiative_ids = (
         db.query(Action.linked_id)
         .filter(Action.date >= recent_cutoff)
-        .filter(Action.linked_id != None)
+        .filter(Action.linked_id is not None)
         .distinct()
         .all()
     )
     for (initiative_id,) in recent_action_initiative_ids:
         if initiative_id and initiative_id not in featured:
-            initiative = db.query(Initiative).filter_by(id=initiative_id).first()
+            initiative = db.query(Initiative).filter_by(
+                id=initiative_id).first()
             if initiative:
                 featured[initiative_id] = initiative
 
@@ -88,7 +89,8 @@ def get_featured_initiatives(db: Session = Depends(get_db)):
 
 @router.get("/{initiative_id}", response_model=InitiativeSchema)
 def get_initiative(initiative_id: UUID, db: Session = Depends(get_db)):
-    initiative = db.query(Initiative).filter(Initiative.id == initiative_id).first()
+    initiative = db.query(Initiative).filter(
+        Initiative.id == initiative_id).first()
     if not initiative:
         raise HTTPException(status_code=404, detail="Initiative not found")
     return initiative
