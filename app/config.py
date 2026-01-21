@@ -6,8 +6,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     POSTGRES_DB: str = os.environ.get("POSTGRES_DB", "app_db")
     POSTGRES_USER: str = os.environ.get("POSTGRES_USER", "app_user")
-    POSTGRES_PASSWORD: str = os.environ.get(
-        "POSTGRES_PASSWORD", "app_password")
+    POSTGRES_PASSWORD: str = os.environ.get("POSTGRES_PASSWORD", "app_password")
     POSTGRES_HOST: str = os.environ.get("POSTGRES_HOST", "localhost")
     POSTGRES_PORT: int = int(os.environ.get("POSTGRES_PORT", 5432))
 

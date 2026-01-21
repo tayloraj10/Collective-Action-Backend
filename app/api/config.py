@@ -1,12 +1,13 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.database import get_db
+from app.models.action_types import ActionTypes
 from app.models.category import Category
 from app.models.status import Status
-from app.models.action_types import ActionTypes
-from app.schemas.category import CategorySchema, CategoryCreate
-from app.schemas.status import StatusSchema, StatusCreate
-from app.schemas.action_types import ActionTypeSchema, ActionTypeCreate
+from app.schemas.action_types import ActionTypeCreate, ActionTypeSchema
+from app.schemas.category import CategoryCreate, CategorySchema
+from app.schemas.status import StatusCreate, StatusSchema
 
 categories_router = APIRouter(prefix="/categories", tags=["categories"])
 statuses_router = APIRouter(prefix="/statuses", tags=["statuses"])
@@ -84,8 +85,7 @@ def get_status(status_id: str, db: Session = Depends(get_db)):
 def get_statuses_by_type(status_type: str, db: Session = Depends(get_db)):
     statuses = db.query(Status).filter(Status.status_type == status_type).all()
     if not statuses:
-        raise HTTPException(
-            status_code=404, detail="No statuses found for this type")
+        raise HTTPException(status_code=404, detail="No statuses found for this type")
     return statuses
 
 
@@ -135,7 +135,9 @@ def get_action_type(action_type_id: str, db: Session = Depends(get_db)):
 
 
 @action_types_router.put("/{action_type_id}", response_model=ActionTypeSchema)
-def update_action_type(action_type_id: str, action_type: ActionTypeCreate, db: Session = Depends(get_db)):
+def update_action_type(
+    action_type_id: str, action_type: ActionTypeCreate, db: Session = Depends(get_db)
+):
     db_action_type = db.query(ActionTypes).get(action_type_id)
     if not db_action_type:
         raise HTTPException(status_code=404, detail="ActionType not found")

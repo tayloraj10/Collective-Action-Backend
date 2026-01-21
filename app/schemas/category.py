@@ -1,7 +1,6 @@
-from pydantic import BaseModel
 from uuid import UUID
-from enum import Enum
 
+from pydantic import BaseModel
 
 # class CategoryValuesEnum(str, Enum):
 #     environment = "Environment"

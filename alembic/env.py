@@ -9,8 +9,7 @@ from app.config import settings
 from app.database import Base
 from app.models import *  # Ensure all models are registered for Alembic
 
-sys.path.append(os.path.abspath(os.path.join(
-    os.path.dirname(__file__), "..", "app")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app")))
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -40,8 +39,7 @@ def run_migrations_online():
     connectable = create_engine(settings.database_url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
-        context.configure(connection=connection,
-                          target_metadata=target_metadata, compare_type=True)
+        context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
 
         with context.begin_transaction():
             context.run_migrations()

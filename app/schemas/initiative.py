@@ -1,18 +1,18 @@
-from pydantic import BaseModel
-from typing import Optional
 import uuid
+
+from pydantic import BaseModel
 
 
 class InitiativeSchema(BaseModel):
     id: uuid.UUID
     title: str
     action: str
-    category_id: Optional[uuid.UUID] = None
-    goal: Optional[int] = None
-    complete: Optional[int] = None
-    link: Optional[str] = None
+    category_id: uuid.UUID | None = None
+    goal: int | None = None
+    complete: int | None = None
+    link: str | None = None
     priority: bool = False
-    status_id: Optional[uuid.UUID] = None
+    status_id: uuid.UUID | None = None
 
     class Config:
         from_attributes = True
@@ -21,8 +21,8 @@ class InitiativeSchema(BaseModel):
 class InitiativeCreateSchema(BaseModel):
     title: str
     action: str
-    category_id: Optional[str] = None
-    goal: Optional[int] = None
-    link: Optional[str] = None
+    category_id: str | None = None
+    goal: int | None = None
+    link: str | None = None
     priority: bool = False
-    status_id: Optional[str] = None
+    status_id: str | None = None

@@ -1,7 +1,8 @@
 from datetime import datetime
-from uuid import UUID
 from enum import Enum
-from pydantic import BaseModel, EmailStr, ConfigDict
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class SocialLinksSchema(BaseModel):
