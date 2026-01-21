@@ -7,8 +7,14 @@ from sqlalchemy import pool
 from alembic import context
 from app.config import settings
 from app.database import Base
-
-# Ensure all models are registered for Alembic
+from app.models import (  # noqa: F401 - imported for Alembic model discovery
+    Action,
+    ActionTypes,
+    Category,
+    Initiative,
+    Status,
+    User,
+)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app")))
 
