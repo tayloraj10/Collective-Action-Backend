@@ -1,12 +1,14 @@
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models.initiative import Initiative
-from app.models.status import Status
-from app.schemas.initiative import InitiativeSchema, InitiativeCreateSchema
-from uuid import UUID
-
+from app.models.action import Action
 from app.schemas.status import StatusTypeEnum, StatusValuesEnum
+from uuid import UUID
+from app.schemas.initiative import InitiativeSchema, InitiativeCreateSchema
+from app.models.status import Status
+from app.models.initiative import Initiative
+from app.database import get_db
+from sqlalchemy.orm import Session
+
 
 router = APIRouter(prefix="/initiatives", tags=["initiatives"])
 
@@ -37,6 +39,46 @@ def list_active_initiatives(db: Session = Depends(get_db)):
 @router.get("/summary", response_model=list[InitiativeSchema])
 def list_initiatives_summary(db: Session = Depends(get_db)):
     return db.query(Initiative).all()
+
+
+@router.get("/featured", response_model=list[InitiativeSchema])
+def get_featured_initiatives(db: Session = Depends(get_db)):
+    # 1. Fetch initiatives with priority=True
+    priority_initiatives = db.query(Initiative).filter_by(priority=True).all()
+    featured = {i.id: i for i in priority_initiatives}
+
+    # 2. Fetch initiatives with recent activity (from actions)
+    recent_cutoff = datetime.now(
+        timezone.utc) - timedelta(days=7)
+    recent_action_initiative_ids = (
+        db.query(Action.linked_id)
+        .filter(Action.date >= recent_cutoff)
+        .filter(Action.linked_id != None)
+        .distinct()
+        .all()
+    )
+    for (initiative_id,) in recent_action_initiative_ids:
+        if initiative_id and initiative_id not in featured:
+            initiative = db.query(Initiative).filter_by(
+                id=initiative_id).first()
+            if initiative:
+                featured[initiative_id] = initiative
+
+    # 3. If fewer than 4, fill with most complete (assuming 'complete' is a column)
+    if len(featured) < 4:
+        needed = 4 - len(featured)
+        from sqlalchemy import nullslast
+        more = (
+            db.query(Initiative)
+            .filter(~Initiative.id.in_(featured.keys()))
+            .order_by(nullslast(Initiative.complete.desc()))
+            .limit(needed)
+            .all()
+        )
+        for i in more:
+            featured[i.id] = i
+
+    return list(featured.values())
 
 
 @router.get("/{initiative_id}", response_model=InitiativeSchema)
