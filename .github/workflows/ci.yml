@@ -34,6 +34,11 @@ jobs:
       - name: Check formatting
         run: ruff format --check app/
 
+      - name: Run Alembic migrations
+        run: |
+          pip install alembic
+          alembic upgrade head
+
       - name: Run tests
         run: |
           pytest tests/ -v || echo "No tests found yet"
@@ -68,5 +73,6 @@ jobs:
             -e DATABASE_URL="postgresql+psycopg2://postgres:testpass@172.17.0.1:5432/testdb" \
             --name test-container test-image
           sleep 10
+          docker exec test-container alembic upgrade head
           docker logs test-container
           curl -f http://localhost:8000/health || exit 1
