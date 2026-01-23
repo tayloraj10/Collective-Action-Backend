@@ -25,7 +25,7 @@ class UserType(str, Enum):
 
 class UserCreate(BaseModel):
     email: EmailStr
-    name: str
+    name: str | None = None
     photo_url: str | None = None
     user_type: UserType | None = None
     is_active: bool | None = None
