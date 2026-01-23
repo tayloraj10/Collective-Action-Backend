@@ -19,7 +19,8 @@ class ActionSchema(BaseModel):
 
 class ActionCreateSchema(BaseModel):
     action_type: str
-    amount: float | None = None
+    amount: float
     image_url: str | None = None
     linked_id: uuid.UUID | None = None
     user_id: uuid.UUID | None = None
+    date: datetime | None = None
