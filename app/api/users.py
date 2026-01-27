@@ -56,6 +56,19 @@ def get_user_by_firebase_id(firebase_id: str, db: Session = Depends(get_db)):
     return user
 
 
+@router.get("/db/{user_id}", response_model=UserSchema)
+def get_user_by_user_id(user_id: str, db: Session = Depends(get_db)):
+    """
+    Retrieve a user by their unique ID.
+    Raises 404 if the user is not found.
+    """
+    user = db.query(UserModel).filter(
+        UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 @router.patch("/{user_id}", response_model=UserSchema)
 def update_user(user_id: UUID, user_update: UserCreate, db: Session = Depends(get_db)):
     """
