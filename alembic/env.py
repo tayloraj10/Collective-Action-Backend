@@ -12,6 +12,7 @@ from app.models import (  # noqa: F401 - imported for Alembic model discovery
     ActionTypes,
     Category,
     Initiative,
+    Quote,
     Status,
     User,
 )
