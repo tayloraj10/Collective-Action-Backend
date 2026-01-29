@@ -31,7 +31,8 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
                 .with_entities(func.coalesce(func.sum(Action.amount), 0))
                 .scalar()
             )
-            initiative = db.query(Initiative).filter(Initiative.id == db_action.linked_id).first()
+            initiative = db.query(Initiative).filter(
+                Initiative.id == db_action.linked_id).first()
             if initiative:
                 initiative.complete = int(total) if total is not None else 0
                 db.commit()
@@ -63,12 +64,7 @@ def get_latest_actions(
         query = query.filter(Action.action_type == action_type)
     latest_actions = query.order_by(Action.date.desc()).all()
     if not latest_actions:
-        raise HTTPException(
-            status_code=404,
-            detail=f"No actions found in the last {days} days with action_type '{action_type}'"
-            if action_type
-            else f"No actions found in the last {days} days",
-        )
+        return []
     return latest_actions
 
 
@@ -83,7 +79,8 @@ def get_action(action_id: UUID, db: Session = Depends(get_db)):
 @router.get("/by_linked/{linked_id}", response_model=list[ActionSchema])
 def get_actions_by_linked(linked_id: UUID, db: Session = Depends(get_db)):
     actions = (
-        db.query(Action).filter(Action.linked_id == linked_id).order_by(Action.date.desc()).all()
+        db.query(Action).filter(Action.linked_id ==
+                                linked_id).order_by(Action.date.desc()).all()
     )
     return actions
 
@@ -107,7 +104,8 @@ def delete_action(action_id: UUID, db: Session = Depends(get_db)):
             .with_entities(func.coalesce(func.sum(Action.amount), 0))
             .scalar()
         )
-        initiative = db.query(Initiative).filter(Initiative.id == linked_id).first()
+        initiative = db.query(Initiative).filter(
+            Initiative.id == linked_id).first()
         if initiative:
             initiative.complete = int(total) if total is not None else 0
             db.commit()
