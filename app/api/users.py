@@ -17,10 +17,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     Validates required fields and checks for duplicate emails.
     """
     if not user.email:
-        raise HTTPException(
-            status_code=422, detail="Email is required")
-    existing = db.query(UserModel).filter(
-        UserModel.email == user.email).first()
+        raise HTTPException(status_code=422, detail="Email is required")
+    existing = db.query(UserModel).filter(UserModel.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     db_user = UserModel(
@@ -49,8 +47,7 @@ def get_user_by_firebase_id(firebase_id: str, db: Session = Depends(get_db)):
     Retrieve a user by their unique ID.
     Raises 404 if the user is not found.
     """
-    user = db.query(UserModel).filter(
-        UserModel.firebase_user_id == firebase_id).first()
+    user = db.query(UserModel).filter(UserModel.firebase_user_id == firebase_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -62,8 +59,7 @@ def get_user_by_user_id(user_id: str, db: Session = Depends(get_db)):
     Retrieve a user by their unique ID.
     Raises 404 if the user is not found.
     """
-    user = db.query(UserModel).filter(
-        UserModel.id == user_id).first()
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -82,11 +78,9 @@ def update_user(user_id: UUID, user_update: UserCreate, db: Session = Depends(ge
 
     # Check if email already exists for another user
     if user_update.email and user_update.email != user.email:
-        existing = db.query(UserModel).filter(
-            UserModel.email == user_update.email).first()
+        existing = db.query(UserModel).filter(UserModel.email == user_update.email).first()
         if existing:
-            raise HTTPException(
-                status_code=400, detail="Email already registered")
+            raise HTTPException(status_code=400, detail="Email already registered")
 
     update_data = user_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():

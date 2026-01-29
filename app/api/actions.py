@@ -1,8 +1,10 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.action import Action
 from app.schemas.action import ActionCreateSchema, ActionSchema
@@ -22,10 +24,14 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
         # If this action is linked to an initiative, update the initiative's complete field
         if db_action.linked_id:
             from app.models.initiative import Initiative
-            total = db.query(Action).filter(Action.linked_id == db_action.linked_id).with_entities(
-                func.coalesce(func.sum(Action.amount), 0)).scalar()
-            initiative = db.query(Initiative).filter(
-                Initiative.id == db_action.linked_id).first()
+
+            total = (
+                db.query(Action)
+                .filter(Action.linked_id == db_action.linked_id)
+                .with_entities(func.coalesce(func.sum(Action.amount), 0))
+                .scalar()
+            )
+            initiative = db.query(Initiative).filter(Initiative.id == db_action.linked_id).first()
             if initiative:
                 initiative.complete = int(total) if total is not None else 0
                 db.commit()
@@ -33,7 +39,8 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(
-            status_code=500, detail=f"Failed to create action or update initiative: {str(e)}")
+            status_code=500, detail=f"Failed to create action or update initiative: {str(e)}"
+        )
 
     return db_action
 
@@ -76,8 +83,7 @@ def get_action(action_id: UUID, db: Session = Depends(get_db)):
 @router.get("/by_linked/{linked_id}", response_model=list[ActionSchema])
 def get_actions_by_linked(linked_id: UUID, db: Session = Depends(get_db)):
     actions = (
-        db.query(Action).filter(Action.linked_id ==
-                                linked_id).order_by(Action.date.desc()).all()
+        db.query(Action).filter(Action.linked_id == linked_id).order_by(Action.date.desc()).all()
     )
     return actions
 
@@ -94,10 +100,14 @@ def delete_action(action_id: UUID, db: Session = Depends(get_db)):
     # If this action was linked to an initiative, update the initiative's complete field
     if linked_id:
         from app.models.initiative import Initiative
-        total = db.query(Action).filter(Action.linked_id == linked_id).with_entities(
-            func.coalesce(func.sum(Action.amount), 0)).scalar()
-        initiative = db.query(Initiative).filter(
-            Initiative.id == linked_id).first()
+
+        total = (
+            db.query(Action)
+            .filter(Action.linked_id == linked_id)
+            .with_entities(func.coalesce(func.sum(Action.amount), 0))
+            .scalar()
+        )
+        initiative = db.query(Initiative).filter(Initiative.id == linked_id).first()
         if initiative:
             initiative.complete = int(total) if total is not None else 0
             db.commit()

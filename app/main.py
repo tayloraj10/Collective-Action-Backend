@@ -9,8 +9,8 @@ from pydantic import BaseModel
 from app.api.actions import router as actions_router
 from app.api.config import action_types_router, categories_router, statuses_router
 from app.api.initiatives import router as initiatives_router
-from app.api.users import router as users_router
 from app.api.quotes import router as quotes_router
+from app.api.users import router as users_router
 from app.database import Base, engine
 from app.models import action as _action_model  # noqa: F401
 from app.models import action_types as _action_types_model  # noqa: F401
@@ -66,8 +66,7 @@ def custom_openapi():
     # Remove ValidationError schemas
     if "components" in openapi_schema and "schemas" in openapi_schema["components"]:
         openapi_schema["components"]["schemas"].pop("ValidationError", None)
-        openapi_schema["components"]["schemas"].pop(
-            "HTTPValidationError", None)
+        openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
 
     # Remove all 422 responses from all endpoints
     if "paths" in openapi_schema:
