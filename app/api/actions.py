@@ -95,7 +95,7 @@ def delete_action(action_id: UUID, db: Session = Depends(get_db)):
     if linked_id:
         from app.models.initiative import Initiative
         total = db.query(Action).filter(Action.linked_id == linked_id).with_entities(
-            db.func.coalesce(db.func.sum(Action.amount), 0)).scalar()
+            func.coalesce(func.sum(Action.amount), 0)).scalar()
         initiative = db.query(Initiative).filter(
             Initiative.id == linked_id).first()
         if initiative:
