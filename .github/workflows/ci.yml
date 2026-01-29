@@ -19,7 +19,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: uv pip install --system --editable .
@@ -64,7 +66,32 @@ jobs:
           docker run -d -p 8000:8080 \
             -e DATABASE_URL="postgresql+psycopg2://postgres:testpass@172.17.0.1:5432/testdb" \
             --name test-container test-image
-          sleep 10
-          docker exec test-container alembic upgrade head
+          
+          # Wait for container to start and run migrations
+          echo "Waiting for container to initialize..."
+          sleep 15
+          
+          # Check if container is still running
+          if ! docker ps | grep -q test-container; then
+            echo "❌ Container exited. Showing logs:"
+            docker logs test-container
+            exit 1
+          fi
+          
+          echo "✅ Container is running. Checking logs:"
           docker logs test-container
-          curl -f http://localhost:8000/health || exit 1
+          
+          # Health check with retries
+          echo "Testing health endpoint..."
+          for i in {1..5}; do
+            if curl -f http://localhost:8000/health; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "Retry $i/5 failed, waiting..."
+            sleep 3
+          done
+          
+          echo "❌ Health check failed after 5 attempts"
+          docker logs test-container
+          exit 1
