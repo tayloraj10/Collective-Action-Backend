@@ -16,8 +16,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     Create a new user in the database.
     Validates required fields and checks for duplicate emails.
     """
-    if not user.email or not user.name:
-        raise HTTPException(status_code=422, detail="Email and name are required")
+    if not user.email:
+        raise HTTPException(status_code=422, detail="Email is required")
     existing = db.query(UserModel).filter(UserModel.email == user.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -41,8 +41,20 @@ def list_users(db: Session = Depends(get_db)):
     return db.query(UserModel).all()
 
 
-@router.get("/{user_id}", response_model=UserSchema)
-def get_user(user_id: UUID, db: Session = Depends(get_db)):
+@router.get("/{firebase_id}", response_model=UserSchema)
+def get_user_by_firebase_id(firebase_id: str, db: Session = Depends(get_db)):
+    """
+    Retrieve a user by their unique ID.
+    Raises 404 if the user is not found.
+    """
+    user = db.query(UserModel).filter(UserModel.firebase_user_id == firebase_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.get("/db/{user_id}", response_model=UserSchema)
+def get_user_by_user_id(user_id: str, db: Session = Depends(get_db)):
     """
     Retrieve a user by their unique ID.
     Raises 404 if the user is not found.
