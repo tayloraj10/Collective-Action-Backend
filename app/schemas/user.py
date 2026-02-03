@@ -34,6 +34,10 @@ class UserCreate(BaseModel):
     firebase_user_id: str | None = None
 
 
+class UserPhotoUpdate(BaseModel):
+    photo_url: str
+
+
 class UserSchema(BaseModel):
     id: UUID | None = None
     email: EmailStr | None = None

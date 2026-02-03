@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -5,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import UserCreate, UserSchema
+from app.schemas.user import UserCreate, UserPhotoUpdate, UserSchema
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -86,6 +87,28 @@ def update_user(user_id: UUID, user_update: UserCreate, db: Session = Depends(ge
     for field, value in update_data.items():
         if field != "id":
             setattr(user, field, value)
+
+    user.updated_at = datetime.now(UTC)
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.patch("/{user_id}/photo", response_model=UserSchema)
+def update_user_photo(user_id: UUID, payload: UserPhotoUpdate, db: Session = Depends(get_db)):
+    """
+    Update only a user's `photo_url`.
+
+    Expected body:
+      { "photo_url": "https://..." }
+    """
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.photo_url = payload.photo_url
+    user.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(user)
