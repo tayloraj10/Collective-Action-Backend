@@ -4,6 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    # Database Configuration
     POSTGRES_DB: str = os.environ.get("POSTGRES_DB", "app_db")
     POSTGRES_USER: str = os.environ.get("POSTGRES_USER", "app_user")
     POSTGRES_PASSWORD: str = os.environ.get("POSTGRES_PASSWORD", "app_password")
@@ -12,6 +13,12 @@ class Settings(BaseSettings):
 
     DB_PASSWORD: str = os.environ.get("DB_PASSWORD", "")
     DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
+
+    # Google Cloud Storage Configuration
+    GCS_USER_IMAGES_BUCKET: str = os.environ.get("GCS_USER_IMAGES_BUCKET", "")
+    GCS_SUBMISSIONS_BUCKET: str = os.environ.get("GCS_SUBMISSIONS_BUCKET", "")
+    GCS_PROJECT_ID: str = os.environ.get("GCS_PROJECT_ID", "")
+    GOOGLE_APPLICATION_CREDENTIALS: str = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
 
     @property
     def database_url(self) -> str:

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from app.api.actions import router as actions_router
 from app.api.config import action_types_router, categories_router, statuses_router
 from app.api.initiatives import router as initiatives_router
+from app.api.photos import router as photos_router
 from app.api.quotes import router as quotes_router
 from app.api.users import router as users_router
 from app.database import Base, engine
@@ -103,3 +104,4 @@ app.include_router(statuses_router)
 app.include_router(action_types_router)
 app.include_router(quotes_router)
 app.include_router(users_router)
+app.include_router(photos_router)

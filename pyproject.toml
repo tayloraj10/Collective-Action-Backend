@@ -17,6 +17,8 @@ dependencies = [
     "pydantic-settings>=2.0",
     "ruff>=0.14.11",
     "alembic>=1.13",
+    "google-cloud-storage>=2.14",
+    "python-multipart>=0.0.6",
 ]
 
 [project.optional-dependencies]
