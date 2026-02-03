@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import BinaryIO
 
 from google.cloud import storage
@@ -17,7 +17,7 @@ class GCSStorage:
 
     def __init__(self):
         """Initialize GCS client with credentials from environment.
-        
+
         Supports two authentication modes:
         1. Local dev: Uses GOOGLE_APPLICATION_CREDENTIALS file path
         2. Cloud Run: Uses workload identity (automatic authentication)
@@ -27,7 +27,7 @@ class GCSStorage:
 
         self.user_images_bucket = settings.GCS_USER_IMAGES_BUCKET
         self.submissions_bucket = settings.GCS_SUBMISSIONS_BUCKET
-        
+
         # If GOOGLE_APPLICATION_CREDENTIALS is set, use it (local dev)
         # Otherwise, use Application Default Credentials (Cloud Run)
         if settings.GOOGLE_APPLICATION_CREDENTIALS:
@@ -36,6 +36,15 @@ class GCSStorage:
         else:
             # On Cloud Run, use workload identity (no credentials file needed)
             self.client = storage.Client(project=settings.GCS_PROJECT_ID)
+
+    def _url_with_cache_bust(self, url: str, version: str | None = None) -> str:
+        """
+        Append a cache-busting query parameter so browsers/CDNs don't serve stale
+        images when the same path is overwritten (e.g. profile photo).
+        """
+        v = version or str(int(datetime.utcnow().timestamp()))
+        sep = "&" if "?" in url else "?"
+        return f"{url}{sep}v={v}"
 
     def upload_user_profile_photo(
         self,
@@ -46,7 +55,7 @@ class GCSStorage:
     ) -> str:
         """
         Upload a user profile photo to the user images bucket.
-        
+
         Path structure: profiles/{user_id}.{ext}
         This will delete any existing profile photos for the user (all extensions)
         before uploading the new one, ensuring only one photo per user.
@@ -76,12 +85,14 @@ class GCSStorage:
             # Create blob and upload
             blob = bucket.blob(blob_name)
             blob.content_type = content_type
+            # Prevent aggressive caching so new uploads at same path are visible
+            blob.cache_control = "no-cache, max-age=0"
 
             # Upload from file object
             file.seek(0)
             blob.upload_from_file(file, content_type=content_type)
 
-            return blob.public_url
+            return self._url_with_cache_bust(blob.public_url)
 
         except GoogleCloudError as e:
             raise Exception(f"Failed to upload profile photo to GCS: {str(e)}")
@@ -97,7 +108,7 @@ class GCSStorage:
     ) -> str:
         """
         Upload a submission photo to the submissions bucket.
-        
+
         Path structure: submissions/{submission_id}/{uuid}.{ext}
         Allows multiple photos per submission.
 
@@ -124,12 +135,13 @@ class GCSStorage:
             # Create blob and upload
             blob = bucket.blob(blob_name)
             blob.content_type = content_type
+            blob.cache_control = "no-cache, max-age=0"
 
             # Upload from file object
             file.seek(0)
             blob.upload_from_file(file, content_type=content_type)
 
-            return blob.public_url
+            return self._url_with_cache_bust(blob.public_url)
 
         except GoogleCloudError as e:
             raise Exception(f"Failed to upload submission photo to GCS: {str(e)}")
@@ -173,14 +185,14 @@ class GCSStorage:
             bucket = self.client.bucket(self.user_images_bucket)
             blobs = bucket.list_blobs(prefix=f"profiles/{user_id}")
             deleted_any = False
-            
+
             for blob in blobs:
                 # Only delete if it matches the exact pattern (with extension)
                 blob_filename = os.path.basename(blob.name)
                 if blob_filename.startswith(user_id + "."):
                     blob.delete()
                     deleted_any = True
-            
+
             return deleted_any
         except GoogleCloudError:
             return False
@@ -237,7 +249,8 @@ class GCSStorage:
         try:
             bucket = self.client.bucket(self.submissions_bucket)
             blobs = bucket.list_blobs(prefix=f"submissions/{submission_id}/")
-            return [blob.public_url for blob in blobs]
+            # Cache-bust so clients don't see stale images
+            return [self._url_with_cache_bust(blob.public_url) for blob in blobs]
         except GoogleCloudError:
             return []
 
@@ -260,8 +273,8 @@ class GCSStorage:
             else:
                 return False
 
-            # Extract blob name from URL
-            blob_name = file_url.split(f"{bucket_name}/")[-1]
+            # Extract blob name from URL (strip cache-bust / query params)
+            blob_name = file_url.split(f"{bucket_name}/")[-1].split("?")[0]
 
             bucket = self.client.bucket(bucket_name)
             blob = bucket.blob(blob_name)
@@ -292,7 +305,5 @@ class GCSStorage:
 
 # Singleton instance
 gcs_storage = (
-    GCSStorage()
-    if settings.GCS_USER_IMAGES_BUCKET and settings.GCS_SUBMISSIONS_BUCKET
-    else None
+    GCSStorage() if settings.GCS_USER_IMAGES_BUCKET and settings.GCS_SUBMISSIONS_BUCKET else None
 )
