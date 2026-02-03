@@ -12,7 +12,7 @@ async def upload_profile_photo(
 ) -> str:
     """
     Upload a user profile photo to cloud storage.
-    
+
     This endpoint uploads a profile photo for a specific user. The photo is stored
     with the user's ID as the filename, so uploading a new photo will replace the old one.
 
@@ -82,7 +82,7 @@ async def upload_submission_photo(
 ) -> str:
     """
     Upload a submission photo to cloud storage.
-    
+
     This endpoint uploads a photo for a specific submission. Multiple photos can be
     uploaded for the same submission - each will get a unique filename.
 
