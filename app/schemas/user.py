@@ -34,6 +34,15 @@ class UserCreate(BaseModel):
     firebase_user_id: str | None = None
 
 
+class UserUpdate(BaseModel):
+    """Schema for PATCH updates. Excludes photo_url, firebase_user_id, is_active."""
+    email: EmailStr | None = None
+    name: str | None = None
+    user_type: UserType | None = None
+    location: LocationSchema | None = None
+    social_links: SocialLinksSchema | None = None
+
+
 class UserPhotoUpdate(BaseModel):
     photo_url: str
 

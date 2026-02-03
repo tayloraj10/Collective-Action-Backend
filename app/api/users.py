@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import UserCreate, UserPhotoUpdate, UserSchema
+from app.schemas.user import UserCreate, UserPhotoUpdate, UserSchema, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -67,11 +67,11 @@ def get_user_by_user_id(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{user_id}", response_model=UserSchema)
-def update_user(user_id: UUID, user_update: UserCreate, db: Session = Depends(get_db)):
+def update_user(user_id: UUID, user_update: UserUpdate, db: Session = Depends(get_db)):
     """
-    Update an existing user's information.
-    Checks for email uniqueness and applies partial updates.
-    Raises 404 if the user is not found.
+    Update an existing user's information (partial update).
+    Cannot update photo_url, firebase_user_id, or is_active; use dedicated endpoints for those.
+    Checks for email uniqueness. Raises 404 if the user is not found.
     """
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
