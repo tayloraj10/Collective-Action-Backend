@@ -1,17 +1,17 @@
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel
 
 
-class StatusValuesEnum(str, Enum):
+class StatusValuesEnum(StrEnum):
     in_progress = "In Progress"
     completed = "Completed"
     active = "Active"
     inactive = "Inactive"
 
 
-class StatusTypeEnum(str, Enum):
+class StatusTypeEnum(StrEnum):
     status = "Status"
     project_status = "Project Status"
 

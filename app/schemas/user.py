@@ -1,5 +1,5 @@
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr
@@ -18,7 +18,7 @@ class LocationSchema(BaseModel):
     country: str | None = None
 
 
-class UserType(str, Enum):
+class UserType(StrEnum):
     PERSON = "person"
     GROUP = "group"
 
