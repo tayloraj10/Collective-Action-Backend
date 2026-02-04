@@ -36,6 +36,7 @@ class UserCreate(BaseModel):
 
 class UserUpdate(BaseModel):
     """Schema for PATCH updates. Excludes photo_url, firebase_user_id, is_active."""
+
     email: EmailStr | None = None
     name: str | None = None
     user_type: UserType | None = None
