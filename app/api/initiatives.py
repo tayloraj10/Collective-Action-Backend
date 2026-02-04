@@ -42,11 +42,6 @@ def list_active_initiatives(db: Session = Depends(get_db)):
     return db.query(Initiative).filter(Initiative.status_id == active_status.id).all()
 
 
-@router.get("/summary", response_model=list[InitiativeSchema])
-def list_initiatives_summary(db: Session = Depends(get_db)):
-    return db.query(Initiative).all()
-
-
 @router.get("/featured", response_model=list[InitiativeSchema])
 def get_featured_initiatives(db: Session = Depends(get_db)):
     # 1. Fetch initiatives with priority=True

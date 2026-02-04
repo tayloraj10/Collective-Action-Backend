@@ -1,10 +1,10 @@
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import BaseModel
 
 
-class ActionTypeValuesEnum(str, Enum):
+class ActionTypeValuesEnum(StrEnum):
     initative = "Initiative"
     map_submission = "Map Submission"
 

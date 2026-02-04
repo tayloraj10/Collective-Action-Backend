@@ -64,6 +64,8 @@ env/
 .env.local
 .env.*.local
 
+creds/
+
 # Database
 *.db
 *.sqlite

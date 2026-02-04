@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -5,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User as UserModel
-from app.schemas.user import UserCreate, UserSchema
+from app.schemas.user import UserCreate, UserPhotoUpdate, UserSchema, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -66,11 +67,11 @@ def get_user_by_user_id(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{user_id}", response_model=UserSchema)
-def update_user(user_id: UUID, user_update: UserCreate, db: Session = Depends(get_db)):
+def update_user(user_id: UUID, user_update: UserUpdate, db: Session = Depends(get_db)):
     """
-    Update an existing user's information.
-    Checks for email uniqueness and applies partial updates.
-    Raises 404 if the user is not found.
+    Update an existing user's information (partial update).
+    Cannot update photo_url, firebase_user_id, or is_active; use dedicated endpoints for those.
+    Checks for email uniqueness. Raises 404 if the user is not found.
     """
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
@@ -86,6 +87,28 @@ def update_user(user_id: UUID, user_update: UserCreate, db: Session = Depends(ge
     for field, value in update_data.items():
         if field != "id":
             setattr(user, field, value)
+
+    user.updated_at = datetime.now(UTC)
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.patch("/{user_id}/photo", response_model=UserSchema)
+def update_user_photo(user_id: UUID, payload: UserPhotoUpdate, db: Session = Depends(get_db)):
+    """
+    Update only a user's `photo_url`.
+
+    Expected body:
+      { "photo_url": "https://..." }
+    """
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user.photo_url = payload.photo_url
+    user.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(user)

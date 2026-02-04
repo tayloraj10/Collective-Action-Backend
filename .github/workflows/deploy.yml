@@ -54,6 +54,9 @@ jobs:
             --region ${{ env.REGION }} \
             --add-cloudsql-instances ${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ env.CLOUD_SQL_INSTANCE }} \
             --set-env-vars DATABASE_URL="postgresql+psycopg2://postgres@/postgres?host=/cloudsql/${{ env.PROJECT_ID }}:${{ env.REGION }}:${{ env.CLOUD_SQL_INSTANCE }}" \
+            --set-env-vars GCS_USER_IMAGES_BUCKET=collective-action-user-images \
+            --set-env-vars GCS_SUBMISSIONS_BUCKET=collective-action-submissions \
+            --set-env-vars GCS_PROJECT_ID=${{ env.PROJECT_ID }} \
             --set-secrets DB_PASSWORD=db_password:latest
 
       - name: Get Service URL
