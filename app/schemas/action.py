@@ -20,9 +20,7 @@ class ActionSchema(BaseModel):
 class ActionCreateSchema(BaseModel):
     action_type: str
     amount: float
-    image_urls: list[str] | None = Field(
-        default=None, description="Optional list of image URLs"
-    )
+    image_urls: list[str] | None = Field(default=None, description="Optional list of image URLs")
     linked_id: uuid.UUID | None = None
     user_id: uuid.UUID | None = None
     date: datetime | None = None
