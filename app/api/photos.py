@@ -76,28 +76,28 @@ async def upload_profile_photo(
 
 
 @router.post("/submission/{submission_id}", status_code=status.HTTP_200_OK)
-async def upload_submission_photo(
+async def upload_submission_photos(
     submission_id: str,
-    file: UploadFile = File(...),
-) -> str:
+    files: list[UploadFile] = File(..., description="One or more image files"),
+) -> list[str]:
     """
-    Upload a submission photo to cloud storage.
+    Upload one or more submission photos to cloud storage.
 
-    This endpoint uploads a photo for a specific submission. Multiple photos can be
-    uploaded for the same submission - each will get a unique filename.
+    This endpoint uploads photos for a specific submission. Each file gets a unique
+    filename under that submission.
 
     Path Structure:
     - collective-action-submissions/submissions/{submission_id}/{uuid}.{ext}
 
     Args:
         submission_id: The ID of the submission (e.g., "submission_123")
-        file: The image file to upload
+        files: One or more image files to upload
 
     Returns:
-        str: The public URL of the uploaded photo
+        list[str]: Public URLs of the uploaded photos (same order as input)
 
     Raises:
-        HTTPException: If upload fails or validation fails
+        HTTPException: If no files provided, validation fails, or upload fails
     """
     if not gcs_storage:
         raise HTTPException(
@@ -105,15 +105,9 @@ async def upload_submission_photo(
             detail="Cloud storage is not configured",
         )
 
-    # Validate file
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
+    if not files:
+        raise HTTPException(status_code=400, detail="At least one file is required")
 
-    is_valid, error_msg = gcs_storage.validate_image_file(file.filename)
-    if not is_valid:
-        raise HTTPException(status_code=400, detail=error_msg)
-
-    # Validate content type
     allowed_content_types = {
         "image/jpeg",
         "image/jpg",
@@ -121,28 +115,41 @@ async def upload_submission_photo(
         "image/gif",
         "image/webp",
     }
-    if file.content_type not in allowed_content_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid content type. Allowed: {', '.join(allowed_content_types)}",
-        )
 
-    try:
-        # Upload file to GCS
-        file_url = gcs_storage.upload_submission_photo(
-            file=file.file,
-            submission_id=submission_id,
-            filename=file.filename,
-            content_type=file.content_type,
-        )
+    # Validate all files first
+    for i, file in enumerate(files):
+        if not file.filename:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File at index {i} has no filename",
+            )
+        is_valid, error_msg = gcs_storage.validate_image_file(file.filename)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_msg)
+        if file.content_type not in allowed_content_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid content type. Allowed: {', '.join(allowed_content_types)}",
+            )
 
-        return file_url
+    # Upload each file and collect URLs
+    urls: list[str] = []
+    for file in files:
+        try:
+            file_url = gcs_storage.upload_submission_photo(
+                file=file.file,
+                submission_id=submission_id,
+                filename=file.filename,
+                content_type=file.content_type or "image/jpeg",
+            )
+            urls.append(file_url)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload photo {file.filename}: {str(e)}",
+            )
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload submission photo: {str(e)}",
-        )
+    return urls
 
 
 @router.get("/submission/{submission_id}", status_code=status.HTTP_200_OK)

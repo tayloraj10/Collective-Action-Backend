@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.action import Action
-from app.schemas.action import ActionCreateSchema, ActionSchema
+from app.schemas.action import ActionCreateSchema, ActionPhotosUpdate, ActionSchema
 from app.schemas.action_types import ActionTypeValuesEnum
 
 router = APIRouter(prefix="/actions", tags=["actions"])
@@ -65,6 +65,22 @@ def get_latest_actions(
     if not latest_actions:
         return []
     return latest_actions
+
+
+@router.patch("/{action_id}/photos", response_model=ActionSchema)
+def update_action_photos(
+    action_id: UUID,
+    payload: ActionPhotosUpdate,
+    db: Session = Depends(get_db),
+):
+    """Update the photo URLs for an action."""
+    action = db.query(Action).filter(Action.id == action_id).first()
+    if not action:
+        raise HTTPException(status_code=404, detail="Action not found")
+    action.image_urls = payload.image_urls
+    db.commit()
+    db.refresh(action)
+    return action
 
 
 @router.get("/{action_id}", response_model=ActionSchema)
