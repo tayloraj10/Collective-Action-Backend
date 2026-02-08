@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -33,13 +34,19 @@ def list_active_initiatives(db: Session = Depends(get_db)):
     active_status = (
         db.query(Status)
         .filter(
-            Status.name == StatusValuesEnum.active and Status.status_type == StatusTypeEnum.status
+            Status.name == StatusValuesEnum.active,
+            Status.status_type == StatusTypeEnum.status,
         )
         .first()
     )
     if not active_status:
         return []
-    return db.query(Initiative).filter(Initiative.status_id == active_status.id).all()
+    return (
+        db.query(Initiative)
+        .filter(Initiative.status_id == active_status.id)
+        .order_by(Initiative.priority.desc(), func.coalesce(Initiative.complete, 0).desc())
+        .all()
+    )
 
 
 @router.get("/featured", response_model=list[InitiativeSchema])
