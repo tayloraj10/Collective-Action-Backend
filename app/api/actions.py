@@ -1,7 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -92,10 +92,16 @@ def get_action(action_id: UUID, db: Session = Depends(get_db)):
 
 
 @router.get("/by_linked/{linked_id}", response_model=list[ActionSchema])
-def get_actions_by_linked(linked_id: UUID, db: Session = Depends(get_db)):
-    actions = (
-        db.query(Action).filter(Action.linked_id == linked_id).order_by(Action.date.desc()).all()
-    )
+def get_actions_by_linked(
+    linked_id: UUID,
+    db: Session = Depends(get_db),
+    days: int | None = Query(None, ge=1, description="Only return actions from the last N days"),
+):
+    query = db.query(Action).filter(Action.linked_id == linked_id)
+    if days is not None:
+        cutoff = datetime.now(UTC) - timedelta(days=days)
+        query = query.filter(Action.date >= cutoff)
+    actions = query.order_by(Action.date.desc()).all()
     return actions
 
 
