@@ -199,6 +199,10 @@ def update_project(
     for key, value in update_data.items():
         setattr(db_project, key, value)
 
+    # Explicitly update the timestamp (ensures it updates even if only relationships changed)
+    from datetime import datetime, timezone
+    db_project.updated_at = datetime.now(timezone.utc)
+
     db.commit()
     db.refresh(db_project)
     db_project = _project_query_with_relations(
@@ -242,6 +246,11 @@ def add_member_to_project(
     else:
         db.add(ProjectMember(project_id=db_project.id,
                user_id=body.user_id, role_id=role_id))
+
+    # Update parent project's timestamp
+    from datetime import datetime, timezone
+    db_project.updated_at = datetime.now(timezone.utc)
+
     db.commit()
     db.refresh(db_project)
     db_project = _project_query_with_relations(
@@ -264,6 +273,11 @@ def remove_member_from_project(
         pm.user_id) == str(user_id)]
     for pm in to_remove:
         db.delete(pm)
+
+    # Update parent project's timestamp
+    from datetime import datetime, timezone
+    db_project.updated_at = datetime.now(timezone.utc)
+
     db.commit()
     db.refresh(db_project)
     db_project = _project_query_with_relations(
@@ -292,6 +306,11 @@ def add_step_to_project(
         status_id=body.status_id,
     )
     db.add(db_step)
+
+    # Update parent project's timestamp
+    from datetime import datetime, timezone
+    db_project.updated_at = datetime.now(timezone.utc)
+
     db.commit()
     db.refresh(db_project)
     db_project = _project_query_with_relations(
@@ -323,6 +342,10 @@ def update_project_step(
     for key, value in update_data.items():
         setattr(db_step, key, value)
 
+    # Update parent project's timestamp
+    from datetime import datetime, timezone
+    db_project.updated_at = datetime.now(timezone.utc)
+
     db.commit()
     db.refresh(db_project)
     db_project = _project_query_with_relations(
@@ -350,6 +373,11 @@ def delete_project_step(
         raise HTTPException(status_code=404, detail="Step not found")
 
     db.delete(db_step)
+
+    # Update parent project's timestamp
+    from datetime import datetime, timezone
+    db_project.updated_at = datetime.now(timezone.utc)
+
     db.commit()
     db.refresh(db_project)
     db_project = _project_query_with_relations(
