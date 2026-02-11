@@ -126,6 +126,13 @@ def list_active_projects(db: Session = Depends(get_db)):
     return [_project_to_schema(p, db) for p in projects]
 
 
+@router.get("/creator/{creator_id}", response_model=list[ProjectSchema])
+def list_projects_by_creator(creator_id: UUID, db: Session = Depends(get_db)):
+    """Get all projects created by a specific user."""
+    projects = _project_query_with_relations(db).filter(Project.creator_id == creator_id).all()
+    return [_project_to_schema(p, db) for p in projects]
+
+
 @router.get("/{project_id}", response_model=ProjectSchema)
 def get_project(project_id: UUID, db: Session = Depends(get_db)):
     db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
