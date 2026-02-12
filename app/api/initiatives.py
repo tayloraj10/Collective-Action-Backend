@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.action import Action
 from app.models.initiative import Initiative
 from app.models.status import Status
+from app.models.user import User
 from app.schemas.initiative import InitiativeCreateSchema, InitiativeSchema
 from app.schemas.status import StatusTypeEnum, StatusValuesEnum
 
@@ -17,7 +18,14 @@ router = APIRouter(prefix="/initiatives", tags=["initiatives"])
 
 @router.post("/", response_model=InitiativeSchema)
 def create_initiative(initiative: InitiativeCreateSchema, db: Session = Depends(get_db)):
-    db_initiative = Initiative(**initiative.dict())
+    # Ensure created_by references an existing user
+    creator = db.query(User).filter(User.id == initiative.created_by).first()
+    if not creator:
+        raise HTTPException(
+            status_code=404,
+            detail=f"User with id {initiative.created_by} not found; cannot set created_by.",
+        )
+    db_initiative = Initiative(**initiative.model_dump())
     db.add(db_initiative)
     db.commit()
     db.refresh(db_initiative)
@@ -45,6 +53,16 @@ def list_active_initiatives(db: Session = Depends(get_db)):
         db.query(Initiative)
         .filter(Initiative.status_id == active_status.id)
         .order_by(Initiative.priority.desc(), func.coalesce(Initiative.complete, 0).desc())
+        .all()
+    )
+
+
+@router.get("/creator/{user_id}", response_model=list[InitiativeSchema])
+def list_initiatives_by_creator(user_id: UUID, db: Session = Depends(get_db)):
+    """Get all initiatives created by a specific user."""
+    return (
+        db.query(Initiative)
+        .filter(Initiative.created_by == user_id)
         .all()
     )
 
@@ -97,3 +115,15 @@ def get_initiatives_by_ids(
     if not initiatives:
         raise HTTPException(status_code=404, detail="No initiatives found for the given IDs")
     return initiatives
+
+
+@router.get("/{initiative_id}", response_model=InitiativeSchema)
+def get_initiative(
+    initiative_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """Get a single initiative by ID (includes created_by)."""
+    initiative = db.query(Initiative).filter(Initiative.id == initiative_id).first()
+    if not initiative:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    return initiative

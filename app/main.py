@@ -28,8 +28,11 @@ from app.models import user as _user_model  # noqa: F401 - ensure models are reg
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables on startup."""
-    Base.metadata.create_all(bind=engine)
+    """Application startup/shutdown."""
+    # NOTE: Don't create tables in production - use Alembic migrations
+    # Uncomment for local development if needed:
+    # if settings.environment == "development":
+    #     Base.metadata.create_all(bind=engine)
     yield
 
 
