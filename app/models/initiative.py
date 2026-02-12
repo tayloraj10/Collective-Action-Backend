@@ -24,6 +24,9 @@ class Initiative(Base):
     status_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("statuses.id"), nullable=True
     )
+    created_by: Mapped[str] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
 
     def __repr__(self) -> str:
         return f"<Initiative id={self.id} title={self.title} action={self.action}>"

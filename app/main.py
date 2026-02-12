@@ -9,22 +9,29 @@ from pydantic import BaseModel
 from app.api.actions import router as actions_router
 from app.api.config import action_types_router, categories_router, statuses_router
 from app.api.initiatives import router as initiatives_router
+from app.api.links import router as links_router
 from app.api.photos import router as photos_router
+from app.api.projects import roles_router as project_roles_router
+from app.api.projects import router as projects_router
 from app.api.quotes import router as quotes_router
 from app.api.users import router as users_router
-from app.database import Base, engine
 from app.models import action as _action_model  # noqa: F401
 from app.models import action_types as _action_types_model  # noqa: F401
 from app.models import category as _category_model  # noqa: F401
 from app.models import initiative as _initiative_model  # noqa: F401
+from app.models import link as _link_model  # noqa: F401
+from app.models import project as _project_model  # noqa: F401
 from app.models import status as _status_model  # noqa: F401
 from app.models import user as _user_model  # noqa: F401 - ensure models are registered
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables on startup."""
-    Base.metadata.create_all(bind=engine)
+    """Application startup/shutdown."""
+    # NOTE: Don't create tables in production - use Alembic migrations
+    # Uncomment for local development if needed:
+    # if settings.environment == "development":
+    #     Base.metadata.create_all(bind=engine)
     yield
 
 
@@ -98,6 +105,9 @@ def health():
 
 
 app.include_router(initiatives_router)
+app.include_router(projects_router)
+app.include_router(project_roles_router)
+app.include_router(links_router)
 app.include_router(actions_router)
 app.include_router(categories_router)
 app.include_router(statuses_router)

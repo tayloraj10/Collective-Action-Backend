@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 
 class StatusValuesEnum(StrEnum):
+    in_development = "In Development"
     in_progress = "In Progress"
     completed = "Completed"
     active = "Active"
@@ -14,6 +15,7 @@ class StatusValuesEnum(StrEnum):
 class StatusTypeEnum(StrEnum):
     status = "Status"
     project_status = "Project Status"
+    step_status = "Step Status"
 
 
 class StatusSchema(BaseModel):
