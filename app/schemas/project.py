@@ -1,9 +1,8 @@
 import uuid
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
-
 
 ALLOWED_MEMBER_ROLES = ("members", "owners", "developers")
 

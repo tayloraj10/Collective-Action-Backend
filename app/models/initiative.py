@@ -20,8 +20,7 @@ class Initiative(Base):
     goal: Mapped[int] = mapped_column(Integer, nullable=True)
     complete: Mapped[int] = mapped_column(Integer, nullable=True)
     link: Mapped[str] = mapped_column(String(512), nullable=True)
-    priority: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False)
+    priority: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("statuses.id"), nullable=True
     )

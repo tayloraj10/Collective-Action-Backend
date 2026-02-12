@@ -10,8 +10,7 @@ class Link(Base):
     """Links entities together (e.g. project to initiative)."""
 
     __tablename__ = "links"
-    __table_args__ = (UniqueConstraint(
-        "project_id", "initiative_id", name="uq_link"),)
+    __table_args__ = (UniqueConstraint("project_id", "initiative_id", name="uq_link"),)
 
     id: Mapped[str] = mapped_column(
         Uuid(as_uuid=True), primary_key=True, nullable=False, default=uuid.uuid4
@@ -24,4 +23,6 @@ class Link(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Link id={self.id} project_id={self.project_id} initiative_id={self.initiative_id}>"
+        return (
+            f"<Link id={self.id} project_id={self.project_id} initiative_id={self.initiative_id}>"
+        )

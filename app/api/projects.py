@@ -1,3 +1,4 @@
+from datetime import UTC
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -38,8 +39,7 @@ def _get_role_id_by_name(db: Session, role_name: str) -> UUID:
     """Get role ID by role name. Raises 404 if not found."""
     role = db.query(ProjectRole).filter(ProjectRole.name == role_name).first()
     if not role:
-        raise HTTPException(
-            status_code=500, detail=f"Role '{role_name}' not found in database")
+        raise HTTPException(status_code=500, detail=f"Role '{role_name}' not found in database")
     return role.id
 
 
@@ -70,9 +70,8 @@ def _project_to_schema(project: Project, db: Session) -> ProjectSchema:
         creator_id=project.creator_id,
         active=project.active,
         members=_build_members_from_relations(project.project_members),
-        steps=[ProjectStepSchema.model_validate(
-            s) for s in (project.project_steps or [])],
-        links=[ProjectLinkSchema.model_validate(l) for l in links],
+        steps=[ProjectStepSchema.model_validate(s) for s in (project.project_steps or [])],
+        links=[ProjectLinkSchema.model_validate(link) for link in links],
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
@@ -94,12 +93,14 @@ def create_project(project: ProjectCreateSchema, db: Session = Depends(get_db)):
 
     # Create project_members
     for role_key in ALLOWED_MEMBER_ROLES:
-        role_name = "owner" if role_key == "owners" else (
-            "developer" if role_key == "developers" else "member")
+        role_name = (
+            "owner"
+            if role_key == "owners"
+            else ("developer" if role_key == "developers" else "member")
+        )
         role_id = _get_role_id_by_name(db, role_name)
         for user_id in getattr(project.members, role_key):
-            db.add(ProjectMember(project_id=db_project.id,
-                   user_id=user_id, role_id=role_id))
+            db.add(ProjectMember(project_id=db_project.id, user_id=user_id, role_id=role_id))
     # Create project_steps
     for s in project.steps:
         db.add(
@@ -114,8 +115,7 @@ def create_project(project: ProjectCreateSchema, db: Session = Depends(get_db)):
         )
 
     db.commit()
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == db_project.id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == db_project.id).first()
     return _project_to_schema(db_project, db)
 
 
@@ -150,8 +150,7 @@ def list_projects_by_creator(creator_id: UUID, db: Session = Depends(get_db)):
 
 @router.get("/{project_id}", response_model=ProjectSchema)
 def get_project(project_id: UUID, db: Session = Depends(get_db)):
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
     return _project_to_schema(db_project, db)
@@ -163,8 +162,7 @@ def update_project(
     project: ProjectUpdateSchema,
     db: Session = Depends(get_db),
 ):
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -175,12 +173,14 @@ def update_project(
             db.delete(pm)
         members = update_data.pop("members")
         for role_key in ALLOWED_MEMBER_ROLES:
-            role_name = "owner" if role_key == "owners" else (
-                "developer" if role_key == "developers" else "member")
+            role_name = (
+                "owner"
+                if role_key == "owners"
+                else ("developer" if role_key == "developers" else "member")
+            )
             role_id = _get_role_id_by_name(db, role_name)
             for user_id in members.get(role_key, []):
-                db.add(ProjectMember(project_id=db_project.id,
-                       user_id=user_id, role_id=role_id))
+                db.add(ProjectMember(project_id=db_project.id, user_id=user_id, role_id=role_id))
     if "steps" in update_data:
         for s in list(db_project.project_steps):
             db.delete(s)
@@ -200,20 +200,19 @@ def update_project(
         setattr(db_project, key, value)
 
     # Explicitly update the timestamp (ensures it updates even if only relationships changed)
-    from datetime import datetime, timezone
-    db_project.updated_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    db_project.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(db_project)
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     return _project_to_schema(db_project, db)
 
 
 @router.delete("/{project_id}", response_model=ProjectSchema)
 def delete_project(project_id: UUID, db: Session = Depends(get_db)):
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
     out = _project_to_schema(db_project, db)
@@ -229,32 +228,32 @@ def add_member_to_project(
     db: Session = Depends(get_db),
 ):
     """Add a user to a project in the given role (members, owners, or developers)."""
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
-    role_name = "owner" if body.role == "owners" else (
-        "developer" if body.role == "developers" else "member")
+    role_name = (
+        "owner"
+        if body.role == "owners"
+        else ("developer" if body.role == "developers" else "member")
+    )
     role_id = _get_role_id_by_name(db, role_name)
     existing = next(
-        (pm for pm in db_project.project_members if str(
-            pm.user_id) == str(body.user_id)),
+        (pm for pm in db_project.project_members if str(pm.user_id) == str(body.user_id)),
         None,
     )
     if existing:
         existing.role_id = role_id
     else:
-        db.add(ProjectMember(project_id=db_project.id,
-               user_id=body.user_id, role_id=role_id))
+        db.add(ProjectMember(project_id=db_project.id, user_id=body.user_id, role_id=role_id))
 
     # Update parent project's timestamp
-    from datetime import datetime, timezone
-    db_project.updated_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    db_project.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(db_project)
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     return _project_to_schema(db_project, db)
 
 
@@ -265,23 +264,21 @@ def remove_member_from_project(
     db: Session = Depends(get_db),
 ):
     """Remove a user from a project."""
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
-    to_remove = [pm for pm in db_project.project_members if str(
-        pm.user_id) == str(user_id)]
+    to_remove = [pm for pm in db_project.project_members if str(pm.user_id) == str(user_id)]
     for pm in to_remove:
         db.delete(pm)
 
     # Update parent project's timestamp
-    from datetime import datetime, timezone
-    db_project.updated_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    db_project.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(db_project)
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     return _project_to_schema(db_project, db)
 
 
@@ -292,8 +289,7 @@ def add_step_to_project(
     db: Session = Depends(get_db),
 ):
     """Add a step to a project."""
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -308,13 +304,13 @@ def add_step_to_project(
     db.add(db_step)
 
     # Update parent project's timestamp
-    from datetime import datetime, timezone
-    db_project.updated_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    db_project.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(db_project)
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     return _project_to_schema(db_project, db)
 
 
@@ -326,15 +322,15 @@ def update_project_step(
     db: Session = Depends(get_db),
 ):
     """Update a specific step in a project."""
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    db_step = db.query(ProjectStep).filter(
-        ProjectStep.id == step_id,
-        ProjectStep.project_id == project_id
-    ).first()
+    db_step = (
+        db.query(ProjectStep)
+        .filter(ProjectStep.id == step_id, ProjectStep.project_id == project_id)
+        .first()
+    )
     if not db_step:
         raise HTTPException(status_code=404, detail="Step not found")
 
@@ -343,13 +339,13 @@ def update_project_step(
         setattr(db_step, key, value)
 
     # Update parent project's timestamp
-    from datetime import datetime, timezone
-    db_project.updated_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    db_project.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(db_project)
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     return _project_to_schema(db_project, db)
 
 
@@ -360,28 +356,28 @@ def delete_project_step(
     db: Session = Depends(get_db),
 ):
     """Delete a specific step from a project."""
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    db_step = db.query(ProjectStep).filter(
-        ProjectStep.id == step_id,
-        ProjectStep.project_id == project_id
-    ).first()
+    db_step = (
+        db.query(ProjectStep)
+        .filter(ProjectStep.id == step_id, ProjectStep.project_id == project_id)
+        .first()
+    )
     if not db_step:
         raise HTTPException(status_code=404, detail="Step not found")
 
     db.delete(db_step)
 
     # Update parent project's timestamp
-    from datetime import datetime, timezone
-    db_project.updated_at = datetime.now(timezone.utc)
+    from datetime import datetime
+
+    db_project.updated_at = datetime.now(UTC)
 
     db.commit()
     db.refresh(db_project)
-    db_project = _project_query_with_relations(
-        db).filter(Project.id == project_id).first()
+    db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     return _project_to_schema(db_project, db)
 
 
@@ -392,11 +388,9 @@ def delete_project_step(
 def create_project_role(role: ProjectRoleCreateSchema, db: Session = Depends(get_db)):
     """Create a new project role."""
     # Check if role name already exists
-    existing = db.query(ProjectRole).filter(
-        ProjectRole.name == role.name).first()
+    existing = db.query(ProjectRole).filter(ProjectRole.name == role.name).first()
     if existing:
-        raise HTTPException(
-            status_code=400, detail=f"Role '{role.name}' already exists")
+        raise HTTPException(status_code=400, detail=f"Role '{role.name}' already exists")
 
     db_role = ProjectRole(name=role.name)
     db.add(db_role)
@@ -434,11 +428,9 @@ def update_project_role(
 
     # Check if new name conflicts with existing role
     if role.name != db_role.name:
-        existing = db.query(ProjectRole).filter(
-            ProjectRole.name == role.name).first()
+        existing = db.query(ProjectRole).filter(ProjectRole.name == role.name).first()
         if existing:
-            raise HTTPException(
-                status_code=400, detail=f"Role '{role.name}' already exists")
+            raise HTTPException(status_code=400, detail=f"Role '{role.name}' already exists")
 
     db_role.name = role.name
     db.commit()
@@ -454,12 +446,13 @@ def delete_project_role(role_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Role not found")
 
     # Check if role is in use
-    in_use = db.query(ProjectMember).filter(
-        ProjectMember.role_id == role_id).first()
+    in_use = db.query(ProjectMember).filter(ProjectMember.role_id == role_id).first()
     if in_use:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot delete role '{db_role.name}' - it is currently assigned to project members"
+            detail=(
+                f"Cannot delete role '{db_role.name}' - it is currently assigned to project members"
+            ),
         )
 
     out = ProjectRoleSchema.model_validate(db_role)

@@ -60,11 +60,7 @@ def list_active_initiatives(db: Session = Depends(get_db)):
 @router.get("/creator/{user_id}", response_model=list[InitiativeSchema])
 def list_initiatives_by_creator(user_id: UUID, db: Session = Depends(get_db)):
     """Get all initiatives created by a specific user."""
-    return (
-        db.query(Initiative)
-        .filter(Initiative.created_by == user_id)
-        .all()
-    )
+    return db.query(Initiative).filter(Initiative.created_by == user_id).all()
 
 
 @router.get("/featured", response_model=list[InitiativeSchema])
