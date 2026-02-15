@@ -23,6 +23,11 @@ class Action(Base):
         Uuid(as_uuid=True), ForeignKey("users.id"), nullable=True
     )
     image_urls: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    # Map event location (for actions linked to map campaigns)
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Optional type-specific payload (e.g. map events; validated by event_data schemas)
+    event_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     def __repr__(self) -> str:
         return f"<Action id={self.id} action_type={self.action_type} user_id={self.user_id}>"

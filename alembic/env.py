@@ -13,6 +13,7 @@ from app.models import (  # noqa: F401 - imported for Alembic model discovery
     Category,
     Initiative,
     Link,
+    MapCampaign,
     Project,
     ProjectMember,
     ProjectRole,
