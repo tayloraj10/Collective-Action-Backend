@@ -35,7 +35,9 @@ def get_cleanup_event_data_schema() -> CleanupEventData:
     "/event-data/trash_report",
     response_model=TrashReportEventData,
     summary="TrashReportEventData schema",
-    description="Schema for event_data when action_type is 'trash_report'. Exposed for OpenAPI/codegen.",
+    description=(
+        "Schema for event_data when action_type is 'trash_report'. Exposed for OpenAPI/codegen."
+    ),
 )
 def get_trash_report_event_data_schema() -> TrashReportEventData:
     return TrashReportEventData()
@@ -45,7 +47,9 @@ def get_trash_report_event_data_schema() -> TrashReportEventData:
     "/event-data/cleanup_route",
     response_model=CleanupRouteEventData,
     summary="CleanupRouteEventData schema",
-    description="Schema for event_data when action_type is 'cleanup_route'. Exposed for OpenAPI/codegen.",
+    description=(
+        "Schema for event_data when action_type is 'cleanup_route'. Exposed for OpenAPI/codegen."
+    ),
 )
 def get_cleanup_route_event_data_schema() -> CleanupRouteEventData:
     return CleanupRouteEventData()
@@ -55,7 +59,10 @@ def get_cleanup_route_event_data_schema() -> CleanupRouteEventData:
     "/event-data/zip_code_submission",
     response_model=ZipCodeSubmissionEventData,
     summary="ZipCodeSubmissionEventData schema",
-    description="Schema for event_data when action_type is 'zip_code_submission'. Exposed for OpenAPI/codegen.",
+    description=(
+        "Schema for event_data when action_type is 'zip_code_submission'. "
+        "Exposed for OpenAPI/codegen."
+    ),
 )
 def get_zip_code_submission_event_data_schema() -> ZipCodeSubmissionEventData:
     return ZipCodeSubmissionEventData()

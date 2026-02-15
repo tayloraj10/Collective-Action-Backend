@@ -16,9 +16,7 @@ router = APIRouter(prefix="/map-campaigns", tags=["map-campaigns"])
 
 
 @router.post("/", response_model=MapCampaignSchema)
-def create_map_campaign(
-    campaign: MapCampaignCreateSchema, db: Session = Depends(get_db)
-):
+def create_map_campaign(campaign: MapCampaignCreateSchema, db: Session = Depends(get_db)):
     creator = db.query(User).filter(User.id == campaign.created_by).first()
     if not creator:
         raise HTTPException(
@@ -49,11 +47,7 @@ def list_map_campaigns_by_type(
     campaign_type: MapCampaignTypeEnum,
     db: Session = Depends(get_db),
 ):
-    return (
-        db.query(MapCampaign)
-        .filter(MapCampaign.map_campaign_type == campaign_type.value)
-        .all()
-    )
+    return db.query(MapCampaign).filter(MapCampaign.map_campaign_type == campaign_type.value).all()
 
 
 @router.get("/creator/{user_id}", response_model=list[MapCampaignSchema])
@@ -63,9 +57,7 @@ def list_map_campaigns_by_creator(user_id: UUID, db: Session = Depends(get_db)):
 
 @router.get("/{campaign_id}", response_model=MapCampaignSchema)
 def get_map_campaign(campaign_id: UUID, db: Session = Depends(get_db)):
-    campaign = (
-        db.query(MapCampaign).filter(MapCampaign.id == campaign_id).first()
-    )
+    campaign = db.query(MapCampaign).filter(MapCampaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(status_code=404, detail="Map campaign not found")
     return campaign

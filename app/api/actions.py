@@ -2,6 +2,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import ValidationError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,6 @@ from app.models.action import Action
 from app.schemas.action import ActionCreateSchema, ActionPhotosUpdate, ActionSchema
 from app.schemas.action_types import ActionTypeValuesEnum
 from app.schemas.event_data import validate_event_data
-from pydantic import ValidationError
 
 router = APIRouter(prefix="/actions", tags=["actions"])
 
@@ -20,9 +20,7 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
     data = action.model_dump()
     if data.get("event_data") is not None:
         try:
-            data["event_data"] = validate_event_data(
-                action.action_type, data["event_data"]
-            )
+            data["event_data"] = validate_event_data(action.action_type, data["event_data"])
         except ValidationError as e:
             raise HTTPException(
                 status_code=422,
