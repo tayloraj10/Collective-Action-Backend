@@ -3,12 +3,12 @@ Pydantic models for type-specific payloads stored in Action.event_data.
 Validate by action_type when creating/updating actions.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class EventDataType(str, Enum):
+class EventDataType(StrEnum):
     """Type discriminator for event_data payloads."""
 
     cleanup = "Cleanup"

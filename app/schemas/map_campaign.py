@@ -1,10 +1,10 @@
 import uuid
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class MapCampaignTypeEnum(str, Enum):
+class MapCampaignTypeEnum(StrEnum):
     cleanup_map = "Cleanup Map"
     zip_code_map = "Zip Code Map"
 
