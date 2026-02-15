@@ -9,13 +9,26 @@ from app.database import get_db
 from app.models.action import Action
 from app.schemas.action import ActionCreateSchema, ActionPhotosUpdate, ActionSchema
 from app.schemas.action_types import ActionTypeValuesEnum
+from app.schemas.event_data import validate_event_data
+from pydantic import ValidationError
 
 router = APIRouter(prefix="/actions", tags=["actions"])
 
 
 @router.post("/", response_model=ActionSchema)
 def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
-    db_action = Action(**action.model_dump())
+    data = action.model_dump()
+    if data.get("event_data") is not None:
+        try:
+            data["event_data"] = validate_event_data(
+                action.action_type, data["event_data"]
+            )
+        except ValidationError as e:
+            raise HTTPException(
+                status_code=422,
+                detail={"event_data": e.errors()},
+            ) from e
+    db_action = Action(**data)
     db.add(db_action)
     try:
         db.commit()

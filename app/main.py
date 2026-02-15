@@ -15,6 +15,7 @@ from app.api.photos import router as photos_router
 from app.api.projects import roles_router as project_roles_router
 from app.api.projects import router as projects_router
 from app.api.quotes import router as quotes_router
+from app.api.schemas import router as schemas_router
 from app.api.users import router as users_router
 from app.models import action as _action_model  # noqa: F401
 from app.models import action_types as _action_types_model  # noqa: F401
@@ -116,5 +117,6 @@ app.include_router(categories_router)
 app.include_router(statuses_router)
 app.include_router(action_types_router)
 app.include_router(quotes_router)
+app.include_router(schemas_router)
 app.include_router(users_router)
 app.include_router(photos_router)

@@ -12,6 +12,9 @@ class ActionSchema(BaseModel):
     image_urls: list[str] = Field(default_factory=list, description="At least one image URL")
     linked_id: uuid.UUID | None = None
     user_id: uuid.UUID | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    event_data: dict | None = None
 
     class Config:
         from_attributes = True
@@ -24,6 +27,9 @@ class ActionCreateSchema(BaseModel):
     linked_id: uuid.UUID | None = None
     user_id: uuid.UUID | None = None
     date: datetime | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    event_data: dict | None = None
 
 
 class ActionPhotosUpdate(BaseModel):
