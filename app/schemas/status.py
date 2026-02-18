@@ -5,8 +5,11 @@ from pydantic import BaseModel
 
 
 class StatusValuesEnum(StrEnum):
+    not_started = "Not Started"
     in_development = "In Development"
     in_progress = "In Progress"
+    in_review = "In Review"
+    blocked = "Blocked"
     completed = "Completed"
     active = "Active"
     inactive = "Inactive"
