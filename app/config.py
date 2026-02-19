@@ -1,9 +1,11 @@
 import os
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
     # Database Configuration
     POSTGRES_DB: str = os.environ.get("POSTGRES_DB", "app_db")
     POSTGRES_USER: str = os.environ.get("POSTGRES_USER", "app_user")
@@ -13,6 +15,9 @@ class Settings(BaseSettings):
 
     DB_PASSWORD: str = os.environ.get("DB_PASSWORD", "")
     DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
+
+    # Environment (production = no path prefix; development/testing = prefix for easy cleanup)
+    ENVIRONMENT: str = "production"
 
     # Google Cloud Storage Configuration
     GCS_USER_IMAGES_BUCKET: str = os.environ.get("GCS_USER_IMAGES_BUCKET", "")

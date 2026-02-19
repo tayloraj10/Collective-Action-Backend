@@ -28,6 +28,12 @@ class GCSStorage:
         self.user_images_bucket = settings.GCS_USER_IMAGES_BUCKET
         self.submissions_bucket = settings.GCS_SUBMISSIONS_BUCKET
 
+        # In dev/testing, prefix all GCS paths so you can easily find and delete test photos
+        if settings.ENVIRONMENT and settings.ENVIRONMENT.lower() != "production":
+            self._path_prefix = f"{settings.ENVIRONMENT.lower()}/"
+        else:
+            self._path_prefix = ""
+
         # If GOOGLE_APPLICATION_CREDENTIALS is set, use it (local dev)
         # Otherwise, use Application Default Credentials (Cloud Run)
         if settings.GOOGLE_APPLICATION_CREDENTIALS:
@@ -36,6 +42,10 @@ class GCSStorage:
         else:
             # On Cloud Run, use workload identity (no credentials file needed)
             self.client = storage.Client(project=settings.GCS_PROJECT_ID)
+
+    def _path(self, path: str) -> str:
+        """Prefix path with dev/testing segment when not in production."""
+        return f"{self._path_prefix}{path}" if self._path_prefix else path
 
     def _url_with_cache_bust(self, url: str, version: str | None = None) -> str:
         """
@@ -80,7 +90,7 @@ class GCSStorage:
 
             # Use user_id as filename with original extension
             file_extension = os.path.splitext(filename)[1].lower()
-            blob_name = f"profiles/{user_id}{file_extension}"
+            blob_name = self._path(f"profiles/{user_id}{file_extension}")
 
             # Create blob and upload
             blob = bucket.blob(blob_name)
@@ -130,7 +140,7 @@ class GCSStorage:
             # Generate unique filename for this photo
             file_extension = os.path.splitext(filename)[1].lower()
             unique_id = uuid.uuid4()
-            blob_name = f"submissions/{submission_id}/{unique_id}{file_extension}"
+            blob_name = self._path(f"submissions/{submission_id}/{unique_id}{file_extension}")
 
             # Create blob and upload
             blob = bucket.blob(blob_name)
@@ -159,7 +169,7 @@ class GCSStorage:
         try:
             bucket = self.client.bucket(self.user_images_bucket)
             # List all blobs that start with profiles/{user_id}
-            blobs = bucket.list_blobs(prefix=f"profiles/{user_id}")
+            blobs = bucket.list_blobs(prefix=self._path(f"profiles/{user_id}"))
             for blob in blobs:
                 # Only delete if it matches the exact pattern (with extension)
                 # This prevents deleting "user_123" when looking for "user_12"
@@ -183,7 +193,7 @@ class GCSStorage:
         """
         try:
             bucket = self.client.bucket(self.user_images_bucket)
-            blobs = bucket.list_blobs(prefix=f"profiles/{user_id}")
+            blobs = bucket.list_blobs(prefix=self._path(f"profiles/{user_id}"))
             deleted_any = False
 
             for blob in blobs:
@@ -209,7 +219,7 @@ class GCSStorage:
             bool: True if deleted successfully, False otherwise
         """
         try:
-            blob_name = f"submissions/{submission_id}/{photo_filename}"
+            blob_name = self._path(f"submissions/{submission_id}/{photo_filename}")
             bucket = self.client.bucket(self.submissions_bucket)
             blob = bucket.blob(blob_name)
             blob.delete()
@@ -229,7 +239,7 @@ class GCSStorage:
         """
         try:
             bucket = self.client.bucket(self.submissions_bucket)
-            blobs = bucket.list_blobs(prefix=f"submissions/{submission_id}/")
+            blobs = bucket.list_blobs(prefix=self._path(f"submissions/{submission_id}/"))
             for blob in blobs:
                 blob.delete()
             return True
@@ -248,7 +258,7 @@ class GCSStorage:
         """
         try:
             bucket = self.client.bucket(self.submissions_bucket)
-            blobs = bucket.list_blobs(prefix=f"submissions/{submission_id}/")
+            blobs = bucket.list_blobs(prefix=self._path(f"submissions/{submission_id}/"))
             # Cache-bust so clients don't see stale images
             return [self._url_with_cache_bust(blob.public_url) for blob in blobs]
         except GoogleCloudError:
