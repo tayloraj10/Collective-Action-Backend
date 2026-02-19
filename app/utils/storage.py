@@ -140,8 +140,7 @@ class GCSStorage:
             # Generate unique filename for this photo
             file_extension = os.path.splitext(filename)[1].lower()
             unique_id = uuid.uuid4()
-            blob_name = self._path(
-                f"submissions/{submission_id}/{unique_id}{file_extension}")
+            blob_name = self._path(f"submissions/{submission_id}/{unique_id}{file_extension}")
 
             # Create blob and upload
             blob = bucket.blob(blob_name)
@@ -155,8 +154,7 @@ class GCSStorage:
             return self._url_with_cache_bust(blob.public_url)
 
         except GoogleCloudError as e:
-            raise Exception(
-                f"Failed to upload submission photo to GCS: {str(e)}")
+            raise Exception(f"Failed to upload submission photo to GCS: {str(e)}")
         except Exception as e:
             raise Exception(f"Upload error: {str(e)}")
 
@@ -221,8 +219,7 @@ class GCSStorage:
             bool: True if deleted successfully, False otherwise
         """
         try:
-            blob_name = self._path(
-                f"submissions/{submission_id}/{photo_filename}")
+            blob_name = self._path(f"submissions/{submission_id}/{photo_filename}")
             bucket = self.client.bucket(self.submissions_bucket)
             blob = bucket.blob(blob_name)
             blob.delete()
@@ -242,8 +239,7 @@ class GCSStorage:
         """
         try:
             bucket = self.client.bucket(self.submissions_bucket)
-            blobs = bucket.list_blobs(prefix=self._path(
-                f"submissions/{submission_id}/"))
+            blobs = bucket.list_blobs(prefix=self._path(f"submissions/{submission_id}/"))
             for blob in blobs:
                 blob.delete()
             return True
@@ -262,8 +258,7 @@ class GCSStorage:
         """
         try:
             bucket = self.client.bucket(self.submissions_bucket)
-            blobs = bucket.list_blobs(prefix=self._path(
-                f"submissions/{submission_id}/"))
+            blobs = bucket.list_blobs(prefix=self._path(f"submissions/{submission_id}/"))
             # Cache-bust so clients don't see stale images
             return [self._url_with_cache_bust(blob.public_url) for blob in blobs]
         except GoogleCloudError:
