@@ -29,6 +29,7 @@ class UserCreate(BaseModel):
     photo_url: str | None = None
     user_type: UserType | None = None
     is_active: bool | None = None
+    admin: bool | None = None
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
     firebase_user_id: str | None = None
@@ -40,6 +41,7 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     name: str | None = None
     user_type: UserType | None = None
+    admin: bool | None = None
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
 
@@ -55,6 +57,7 @@ class UserSchema(BaseModel):
     photo_url: str | None = None
     user_type: UserType | None = None
     is_active: bool | None = None
+    admin: bool | None = None
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
     firebase_user_id: str | None = None
