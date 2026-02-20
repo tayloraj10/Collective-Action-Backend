@@ -21,8 +21,7 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
     data = action.model_dump()
     if data.get("event_data") is not None:
         try:
-            data["event_data"] = validate_event_data(
-                action.action_type, data["event_data"])
+            data["event_data"] = validate_event_data(action.action_type, data["event_data"])
         except ValidationError as e:
             raise HTTPException(
                 status_code=422,
@@ -44,8 +43,7 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
                 .with_entities(func.coalesce(func.sum(Action.amount), 0))
                 .scalar()
             )
-            initiative = db.query(Initiative).filter(
-                Initiative.id == db_action.linked_id).first()
+            initiative = db.query(Initiative).filter(Initiative.id == db_action.linked_id).first()
             if initiative:
                 initiative.complete = int(total) if total is not None else 0
                 db.commit()
@@ -81,13 +79,12 @@ def _is_directory_of_good_action(action_type: str | None) -> bool:
 def get_latest_actions(
     db: Session = Depends(get_db), days: int = 30, action_type: ActionTypeValuesEnum = None
 ):
-    """Recent actions. Featured DoG-linked actions first; then within each day, directory-of-good actions first, then by date desc."""
+    # Recent actions: featured Directory of Good-linked first; then per day,
+    # directory-of-good first, then by date descending.
     cutoff_date = datetime.now(UTC) - timedelta(days=days)
     featured_dog_ids = {
         str(row[0])
-        for row in db.query(DirectoryOfGood.id).filter(
-            DirectoryOfGood.featured.is_(True)
-        ).all()
+        for row in db.query(DirectoryOfGood.id).filter(DirectoryOfGood.featured.is_(True)).all()
     }
 
     query = db.query(Action).filter(Action.date >= cutoff_date)
@@ -98,8 +95,7 @@ def get_latest_actions(
     def sort_key(a):
         linked = str(a.linked_id) if a.linked_id else None
         is_featured_dog = linked in featured_dog_ids
-        day_ordinal = (a.date.date() if a.date else datetime.now(
-            UTC).date()).toordinal()
+        day_ordinal = (a.date.date() if a.date else datetime.now(UTC).date()).toordinal()
         is_dog = _is_directory_of_good_action(a.action_type)
         ts = a.date.timestamp() if a.date else 0
         return (not is_featured_dog, -day_ordinal, not is_dog, -ts)
@@ -136,8 +132,7 @@ def get_action(action_id: UUID, db: Session = Depends(get_db)):
 def get_actions_by_linked(
     linked_id: UUID,
     db: Session = Depends(get_db),
-    days: int | None = Query(
-        None, ge=1, description="Only return actions from the last N days"),
+    days: int | None = Query(None, ge=1, description="Only return actions from the last N days"),
 ):
     query = db.query(Action).filter(Action.linked_id == linked_id)
     if days is not None:
@@ -166,8 +161,7 @@ def delete_action(action_id: UUID, db: Session = Depends(get_db)):
             .with_entities(func.coalesce(func.sum(Action.amount), 0))
             .scalar()
         )
-        initiative = db.query(Initiative).filter(
-            Initiative.id == linked_id).first()
+        initiative = db.query(Initiative).filter(Initiative.id == linked_id).first()
         if initiative:
             initiative.complete = int(total) if total is not None else 0
             db.commit()

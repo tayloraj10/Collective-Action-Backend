@@ -8,7 +8,7 @@ location and social_links over the directory's when user_id is set.
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, Text, Uuid, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -32,10 +32,12 @@ class DirectoryOfGood(Base):
     )
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    # Location: same shape as LocationSchema (city, state, country). When linked to a user, prefer user.location for display.
+    # Location: same shape as LocationSchema (city, state, country).
+    # When linked to a user, prefer user.location for display.
     location: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
-    # Social: same shape as SocialLinksSchema (youtube, instagram, tiktok, website). When linked to a user, prefer user.social_links for display.
+    # Social: same shape as SocialLinksSchema (youtube, instagram, tiktok, website).
+    # When linked to a user, prefer user.social_links for display.
     social_links: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Optional link to user account (when they sign up)
@@ -51,8 +53,7 @@ class DirectoryOfGood(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
-    user: Mapped["User | None"] = relationship(
-        "User", back_populates="directory_of_good_entry")
+    user: Mapped["User | None"] = relationship("User", back_populates="directory_of_good_entry")
 
     def __repr__(self) -> str:
         return f"<DirectoryOfGood id={self.id} name={self.name} user_id={self.user_id}>"

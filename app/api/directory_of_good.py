@@ -66,9 +66,7 @@ class FeatureUpdate(BaseModel):
 
 
 @router.patch("/{entry_id}/feature", response_model=DirectoryOfGoodSchema)
-def set_featured(
-    entry_id: UUID, body: FeatureUpdate, db: Session = Depends(get_db)
-):
+def set_featured(entry_id: UUID, body: FeatureUpdate, db: Session = Depends(get_db)):
     """Feature or unfeature a directory of good entry."""
     entry = db.query(DirectoryOfGood).filter(DirectoryOfGood.id == entry_id).first()
     if not entry:
@@ -80,9 +78,7 @@ def set_featured(
 
 
 @router.patch("/{entry_id}", response_model=DirectoryOfGoodSchema)
-def update_entry(
-    entry_id: UUID, body: DirectoryOfGoodUpdate, db: Session = Depends(get_db)
-):
+def update_entry(entry_id: UUID, body: DirectoryOfGoodUpdate, db: Session = Depends(get_db)):
     """Update a directory of good entry (partial update)."""
     entry = db.query(DirectoryOfGood).filter(DirectoryOfGood.id == entry_id).first()
     if not entry:
