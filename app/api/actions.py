@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.action import Action
+from app.models.directory_of_good import DirectoryOfGood
 from app.schemas.action import ActionCreateSchema, ActionPhotosUpdate, ActionSchema
 from app.schemas.action_types import ActionTypeValuesEnum
 from app.schemas.event_data import validate_event_data
@@ -64,18 +65,43 @@ def list_actions(db: Session = Depends(get_db), limit: int = None):
     return query.all()
 
 
+_DIRECTORY_OF_GOOD_ACTION_TYPE = "Directory of Good Addition"
+
+
+def _is_directory_of_good_action(action_type: str | None) -> bool:
+    if not action_type:
+        return False
+    at = (action_type or "").strip()
+    return at == _DIRECTORY_OF_GOOD_ACTION_TYPE or "directory of good" in at.lower()
+
+
 @router.get("/recent", response_model=list[ActionSchema])
 def get_latest_actions(
-    db: Session = Depends(get_db), days: int = 7, action_type: ActionTypeValuesEnum = None
+    db: Session = Depends(get_db), days: int = 30, action_type: ActionTypeValuesEnum = None
 ):
+    # Recent actions: featured Directory of Good-linked first; then per day,
+    # directory-of-good first, then by date descending.
     cutoff_date = datetime.now(UTC) - timedelta(days=days)
+    featured_dog_ids = {
+        str(row[0])
+        for row in db.query(DirectoryOfGood.id).filter(DirectoryOfGood.featured.is_(True)).all()
+    }
+
     query = db.query(Action).filter(Action.date >= cutoff_date)
     if action_type:
         query = query.filter(Action.action_type == action_type)
-    latest_actions = query.order_by(Action.date.desc()).all()
-    if not latest_actions:
-        return []
-    return latest_actions
+    actions = query.all()
+
+    def sort_key(a):
+        linked = str(a.linked_id) if a.linked_id else None
+        is_featured_dog = linked in featured_dog_ids
+        day_ordinal = (a.date.date() if a.date else datetime.now(UTC).date()).toordinal()
+        is_dog = _is_directory_of_good_action(a.action_type)
+        ts = a.date.timestamp() if a.date else 0
+        return (not is_featured_dog, -day_ordinal, not is_dog, -ts)
+
+    actions.sort(key=sort_key)
+    return actions
 
 
 @router.patch("/{action_id}/photos", response_model=ActionSchema)

@@ -65,8 +65,13 @@ def list_initiatives_by_creator(user_id: UUID, db: Session = Depends(get_db)):
 
 @router.get("/featured", response_model=list[InitiativeSchema])
 def get_featured_initiatives(db: Session = Depends(get_db)):
-    # 1. Fetch initiatives with priority=True
-    priority_initiatives = db.query(Initiative).filter_by(priority=True).all()
+    # 1. Fetch initiatives with priority=True, sorted by complete (desc)
+    priority_initiatives = (
+        db.query(Initiative)
+        .filter_by(priority=True)
+        .order_by(func.coalesce(Initiative.complete, 0).desc())
+        .all()
+    )
     featured = {i.id: i for i in priority_initiatives}
 
     # 2. Fetch initiatives with recent activity (from actions)

@@ -1,6 +1,7 @@
 from .action import Action
 from .action_types import ActionTypes
 from .category import Category
+from .directory_of_good import DirectoryOfGood
 from .initiative import Initiative
 from .link import Link
 from .map_campaign import MapCampaign
@@ -13,6 +14,7 @@ __all__ = [
     "Action",
     "ActionTypes",
     "Category",
+    "DirectoryOfGood",
     "Initiative",
     "Link",
     "MapCampaign",
