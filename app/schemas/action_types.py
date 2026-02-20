@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class ActionTypeValuesEnum(StrEnum):
     initative = "Initiative"
     map_submission = "Map Submission"
+    directory_of_good = "Directory of Good Addition"
 
 
 class ActionTypeSchema(BaseModel):

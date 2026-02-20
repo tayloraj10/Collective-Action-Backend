@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ActionSchema(BaseModel):
@@ -9,12 +9,19 @@ class ActionSchema(BaseModel):
     action_type: str
     amount: float | None = None
     date: datetime
-    image_urls: list[str] = Field(default_factory=list, description="At least one image URL")
+    image_urls: list[str] = Field(default_factory=list, description="List of image URLs")
     linked_id: uuid.UUID | None = None
     user_id: uuid.UUID | None = None
     latitude: float | None = None
     longitude: float | None = None
     event_data: dict | None = None
+
+    @field_validator("image_urls", mode="before")
+    @classmethod
+    def image_urls_none_to_list(cls, v: list[str] | None) -> list[str]:
+        if v is None:
+            return []
+        return v
 
     class Config:
         from_attributes = True
