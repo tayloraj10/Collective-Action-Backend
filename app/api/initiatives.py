@@ -65,8 +65,13 @@ def list_initiatives_by_creator(user_id: UUID, db: Session = Depends(get_db)):
 
 @router.get("/featured", response_model=list[InitiativeSchema])
 def get_featured_initiatives(db: Session = Depends(get_db)):
-    # 1. Fetch initiatives with priority=True
-    priority_initiatives = db.query(Initiative).filter_by(priority=True).all()
+    # 1. Fetch initiatives with priority=True, sorted by complete (desc)
+    priority_initiatives = (
+        db.query(Initiative)
+        .filter_by(priority=True)
+        .order_by(func.coalesce(Initiative.complete, 0).desc())
+        .all()
+    )
     featured = {i.id: i for i in priority_initiatives}
 
     # 2. Fetch initiatives with recent activity (from actions)
@@ -80,7 +85,8 @@ def get_featured_initiatives(db: Session = Depends(get_db)):
     )
     for (initiative_id,) in recent_action_initiative_ids:
         if initiative_id and initiative_id not in featured:
-            initiative = db.query(Initiative).filter_by(id=initiative_id).first()
+            initiative = db.query(Initiative).filter_by(
+                id=initiative_id).first()
             if initiative:
                 featured[initiative_id] = initiative
 
@@ -104,12 +110,15 @@ def get_featured_initiatives(db: Session = Depends(get_db)):
 
 @router.get("/by-ids", response_model=list[InitiativeSchema])
 def get_initiatives_by_ids(
-    initiative_ids: list[UUID] = Query(..., description="List of initiative IDs"),
+    initiative_ids: list[UUID] = Query(...,
+                                       description="List of initiative IDs"),
     db: Session = Depends(get_db),
 ):
-    initiatives = db.query(Initiative).filter(Initiative.id.in_(initiative_ids)).all()
+    initiatives = db.query(Initiative).filter(
+        Initiative.id.in_(initiative_ids)).all()
     if not initiatives:
-        raise HTTPException(status_code=404, detail="No initiatives found for the given IDs")
+        raise HTTPException(
+            status_code=404, detail="No initiatives found for the given IDs")
     return initiatives
 
 
@@ -119,7 +128,8 @@ def get_initiative(
     db: Session = Depends(get_db),
 ):
     """Get a single initiative by ID (includes created_by)."""
-    initiative = db.query(Initiative).filter(Initiative.id == initiative_id).first()
+    initiative = db.query(Initiative).filter(
+        Initiative.id == initiative_id).first()
     if not initiative:
         raise HTTPException(status_code=404, detail="Initiative not found")
     return initiative

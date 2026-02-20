@@ -39,7 +39,11 @@ def create_entry(body: DirectoryOfGoodCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=list[DirectoryOfGoodSchema])
 def list_entries(db: Session = Depends(get_db)):
     """List all directory of good entries."""
-    return db.query(DirectoryOfGood).order_by(DirectoryOfGood.created_at.desc()).all()
+    return (
+        db.query(DirectoryOfGood)
+        .order_by(DirectoryOfGood.featured.desc(), DirectoryOfGood.created_at.desc())
+        .all()
+    )
 
 
 @router.get("/{entry_id}", response_model=DirectoryOfGoodSchema)
