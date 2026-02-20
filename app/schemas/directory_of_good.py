@@ -15,6 +15,7 @@ class DirectoryOfGoodSchema(BaseModel):
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
     user_id: UUID | None = None
+    featured: bool = False
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
@@ -28,6 +29,7 @@ class DirectoryOfGoodCreate(BaseModel):
     image_url: str | None = None
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
+    featured: bool = False
 
 
 class DirectoryOfGoodUpdate(BaseModel):
@@ -37,3 +39,4 @@ class DirectoryOfGoodUpdate(BaseModel):
     image_url: str | None = None
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
+    featured: bool | None = None

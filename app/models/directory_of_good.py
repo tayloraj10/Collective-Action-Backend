@@ -8,7 +8,7 @@ location and social_links over the directory's when user_id is set.
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, JSON, String, Text, Uuid, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, JSON, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -42,6 +42,7 @@ class DirectoryOfGood(Base):
     user_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=True
     )
+    featured: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
