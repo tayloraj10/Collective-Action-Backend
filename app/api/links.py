@@ -22,8 +22,7 @@ def _validate_link_entities(link: LinkCreateSchema, db: Session) -> None:
             raise HTTPException(status_code=404, detail="Initiative not found")
     if link.map_campaign_id is not None:
         if db.query(MapCampaign).filter(MapCampaign.id == link.map_campaign_id).first() is None:
-            raise HTTPException(
-                status_code=404, detail="Map campaign not found")
+            raise HTTPException(status_code=404, detail="Map campaign not found")
 
 
 def _raise_if_link_duplicate(link: LinkCreateSchema, db: Session) -> None:
@@ -99,8 +98,7 @@ def get_links_by_project(project_id: UUID, db: Session = Depends(get_db)):
 def get_links_by_initiative(initiative_id: UUID, db: Session = Depends(get_db)):
     """Get all links for a specific initiative."""
     # Validate initiative exists
-    initiative = db.query(Initiative).filter(
-        Initiative.id == initiative_id).first()
+    initiative = db.query(Initiative).filter(Initiative.id == initiative_id).first()
     if not initiative:
         raise HTTPException(status_code=404, detail="Initiative not found")
 
@@ -114,19 +112,16 @@ def _validate_update_entities(update_data: dict, db: Session, db_link: Link) -> 
             raise HTTPException(status_code=404, detail="Project not found")
     if update_data.get("initiative_id") is not None:
         if (
-            db.query(Initiative).filter(Initiative.id ==
-                                        update_data["initiative_id"]).first()
+            db.query(Initiative).filter(Initiative.id == update_data["initiative_id"]).first()
             is None
         ):
             raise HTTPException(status_code=404, detail="Initiative not found")
     if update_data.get("map_campaign_id") is not None:
         if (
-            db.query(MapCampaign).filter(MapCampaign.id ==
-                                         update_data["map_campaign_id"]).first()
+            db.query(MapCampaign).filter(MapCampaign.id == update_data["map_campaign_id"]).first()
             is None
         ):
-            raise HTTPException(
-                status_code=404, detail="Map campaign not found")
+            raise HTTPException(status_code=404, detail="Map campaign not found")
 
 
 def _raise_if_update_link_duplicate(
@@ -172,8 +167,7 @@ def update_link(link_id: UUID, link: LinkUpdateSchema, db: Session = Depends(get
     _validate_update_entities(update_data, db, db_link)
     new_project_id = update_data.get("project_id", db_link.project_id)
     new_initiative_id = update_data.get("initiative_id", db_link.initiative_id)
-    new_map_campaign_id = update_data.get(
-        "map_campaign_id", db_link.map_campaign_id)
+    new_map_campaign_id = update_data.get("map_campaign_id", db_link.map_campaign_id)
     _raise_if_update_link_duplicate(
         link_id, new_project_id, new_initiative_id, new_map_campaign_id, db
     )
