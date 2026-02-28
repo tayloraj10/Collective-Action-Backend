@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.action import Action
 from app.models.directory_of_good import DirectoryOfGood
+from app.models.link import Link
+from app.models.map_campaign import MapCampaign
 from app.schemas.action import ActionCreateSchema, ActionPhotosUpdate, ActionSchema
 from app.schemas.action_types import ActionTypeValuesEnum
 from app.schemas.event_data import validate_event_data
@@ -30,24 +32,75 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
     db_action = Action(**data)
     db.add(db_action)
     try:
+        db.flush()  # get db_action.id and allow use in same transaction
+
+        # Links with both map_campaign_id and initiative_id: map submissions should also create initiative actions
+        initiative_ids_to_mirror: list[UUID] = []
+        if db_action.linked_id is not None:
+            links = (
+                db.query(Link)
+                .filter(
+                    Link.map_campaign_id == db_action.linked_id,
+                    Link.initiative_id.isnot(None),
+                )
+                .all()
+            )
+            initiative_ids_to_mirror = list(
+                {link.initiative_id for link in links if link.initiative_id is not None}
+            )
+
+        # Cleanup Map: initiative amount = small_bags + large_bags from event_data, else 1
+        initiative_amount: float | None = db_action.amount
+        if initiative_ids_to_mirror and db_action.linked_id is not None:
+            campaign = db.query(MapCampaign).filter(MapCampaign.id == db_action.linked_id).first()
+            if campaign and campaign.title == "Cleanup Map" and db_action.event_data:
+                small = db_action.event_data.get("small_bags")
+                large = db_action.event_data.get("large_bags")
+                total_bags = (small if small is not None else 0) + (large if large is not None else 0)
+                initiative_amount = float(total_bags) if total_bags else 1.0
+
+        for initiative_id in initiative_ids_to_mirror:
+            # Nudge initiative action slightly later so it sorts before the map submission
+            initiative_action = Action(
+                action_type=ActionTypeValuesEnum.initative.value,
+                amount=initiative_amount,
+                date=(db_action.date + timedelta(milliseconds=1)) if db_action.date else None,
+                user_id=db_action.user_id,
+                image_urls=db_action.image_urls,
+                linked_id=initiative_id,
+                latitude=db_action.latitude,
+                longitude=db_action.longitude,
+                event_data=db_action.event_data,
+            )
+            db.add(initiative_action)
+
         db.commit()
         db.refresh(db_action)
 
-        # If this action is linked to an initiative, update the initiative's complete field
-        if db_action.linked_id:
-            from app.models.initiative import Initiative
+        # Update initiative complete for any linked initiative (main action or mirror)
+        from app.models.initiative import Initiative
 
+        to_update: set[UUID] = set(initiative_ids_to_mirror)
+        if db_action.linked_id is not None:
+            init = db.query(Initiative).filter(Initiative.id == db_action.linked_id).first()
+            if init is not None:
+                to_update.add(db_action.linked_id)
+        for iid in to_update:
             total = (
                 db.query(Action)
-                .filter(Action.linked_id == db_action.linked_id)
+                .filter(Action.linked_id == iid)
                 .with_entities(func.coalesce(func.sum(Action.amount), 0))
                 .scalar()
             )
-            initiative = db.query(Initiative).filter(Initiative.id == db_action.linked_id).first()
+            initiative = db.query(Initiative).filter(Initiative.id == iid).first()
             if initiative:
                 initiative.complete = int(total) if total is not None else 0
-                db.commit()
-                db.refresh(initiative)
+        if to_update:
+            db.commit()
+            for iid in to_update:
+                initiative = db.query(Initiative).filter(Initiative.id == iid).first()
+                if initiative:
+                    db.refresh(initiative)
     except Exception as e:
         db.rollback()
         raise HTTPException(
