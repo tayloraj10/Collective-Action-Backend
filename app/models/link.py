@@ -19,13 +19,13 @@ class Link(Base):
         Uuid(as_uuid=True), primary_key=True, nullable=False, default=uuid.uuid4
     )
     project_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("projects.id", ondelete="RESTRICT"), nullable=True
     )
     initiative_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("initiatives.id", ondelete="CASCADE"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("initiatives.id", ondelete="RESTRICT"), nullable=True
     )
     map_campaign_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("map_campaigns.id", ondelete="CASCADE"), nullable=True
+        Uuid(as_uuid=True), ForeignKey("map_campaigns.id", ondelete="RESTRICT"), nullable=True
     )
 
     def __repr__(self) -> str:

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.link import Link
 from app.models.map_campaign import MapCampaign
 from app.models.user import User
 from app.schemas.map_campaign import (
@@ -61,3 +62,23 @@ def get_map_campaign(campaign_id: UUID, db: Session = Depends(get_db)):
     if not campaign:
         raise HTTPException(status_code=404, detail="Map campaign not found")
     return campaign
+
+
+@router.delete("/{campaign_id}", status_code=204)
+def delete_map_campaign(campaign_id: UUID, db: Session = Depends(get_db)):
+    """Delete a map campaign. Fails with 409 if any link references this campaign."""
+    campaign = db.query(MapCampaign).filter(MapCampaign.id == campaign_id).first()
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Map campaign not found")
+    link_count = db.query(Link).filter(Link.map_campaign_id == campaign_id).count()
+    if link_count:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Cannot delete map campaign: it is referenced by one or more links. "
+                "Remove or update the map_campaign_id from those links first."
+            ),
+        )
+    db.delete(campaign)
+    db.commit()
+    return None
