@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.action import Action
 from app.models.initiative import Initiative
+from app.models.link import Link
 from app.models.status import Status
 from app.models.user import User
 from app.schemas.initiative import InitiativeCreateSchema, InitiativeSchema
@@ -128,3 +129,23 @@ def get_initiative(
     if not initiative:
         raise HTTPException(status_code=404, detail="Initiative not found")
     return initiative
+
+
+@router.delete("/{initiative_id}", status_code=204)
+def delete_initiative(initiative_id: UUID, db: Session = Depends(get_db)):
+    """Delete an initiative. Fails with 409 if any link references this initiative."""
+    initiative = db.query(Initiative).filter(Initiative.id == initiative_id).first()
+    if not initiative:
+        raise HTTPException(status_code=404, detail="Initiative not found")
+    link_count = db.query(Link).filter(Link.initiative_id == initiative_id).count()
+    if link_count:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Cannot delete initiative: it is referenced by one or more links. "
+                "Remove or update the initiative_id from those links first."
+            ),
+        )
+    db.delete(initiative)
+    db.commit()
+    return None

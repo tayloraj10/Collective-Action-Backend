@@ -212,9 +212,19 @@ def update_project(
 
 @router.delete("/{project_id}", response_model=ProjectSchema)
 def delete_project(project_id: UUID, db: Session = Depends(get_db)):
+    """Delete a project. Fails with 409 if any link references this project."""
     db_project = _project_query_with_relations(db).filter(Project.id == project_id).first()
     if not db_project:
         raise HTTPException(status_code=404, detail="Project not found")
+    link_count = db.query(Link).filter(Link.project_id == project_id).count()
+    if link_count:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Cannot delete project: it is referenced by one or more links. "
+                "Remove or update the project_id from those links first."
+            ),
+        )
     out = _project_to_schema(db_project, db)
     db.delete(db_project)
     db.commit()
