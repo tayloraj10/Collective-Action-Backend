@@ -103,16 +103,18 @@ class ProjectStepUpdateSchema(BaseModel):
 
 class ProjectLinkSchema(BaseModel):
     id: uuid.UUID
-    project_id: uuid.UUID
-    initiative_id: uuid.UUID
+    project_id: uuid.UUID | None = None
+    initiative_id: uuid.UUID | None = None
+    map_campaign_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 
 
 class ProjectLinkCreateSchema(BaseModel):
-    """Link a project to an initiative."""
+    """Link a project to either an initiative or a map campaign."""
 
-    initiative_id: uuid.UUID
+    initiative_id: uuid.UUID | None = None
+    map_campaign_id: uuid.UUID | None = None
 
 
 # --- Project (response: full data with members, steps, links) ---
