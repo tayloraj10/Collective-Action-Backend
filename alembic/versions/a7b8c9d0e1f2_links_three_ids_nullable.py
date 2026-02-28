@@ -31,7 +31,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute("UPDATE links SET project_id = (SELECT id FROM projects LIMIT 1) WHERE project_id IS NULL")
+    op.execute(
+        "UPDATE links SET project_id = (SELECT id FROM projects LIMIT 1) WHERE project_id IS NULL"
+    )
     op.alter_column(
         "links",
         "project_id",

@@ -75,4 +75,3 @@ def downgrade() -> None:
         existing_type=postgresql.UUID(as_uuid=True),
         nullable=False,
     )
-
