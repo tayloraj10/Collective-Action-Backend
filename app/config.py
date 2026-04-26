@@ -25,6 +25,19 @@ class Settings(BaseSettings):
     GCS_PROJECT_ID: str = os.environ.get("GCS_PROJECT_ID", "")
     GOOGLE_APPLICATION_CREDENTIALS: str = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
 
+    # Directory of Good: "Interesting People" Google Sheet (share sheet with service account)
+    DIRECTORY_GOOGLE_SHEET_ID: str = os.environ.get(
+        "DIRECTORY_GOOGLE_SHEET_ID",
+        "1KVYFjM8E_c65hzia2LWgtwvO9UKeqUXJpsfhB2OeOAo",
+    )
+    DIRECTORY_GOOGLE_SHEET_GID: int = int(
+        os.environ.get("DIRECTORY_GOOGLE_SHEET_GID", "1363212709")
+    )
+    # If set, POST /directory-of-good/sync-from-google-sheet requires header X-Sync-Secret
+    DIRECTORY_GOOGLE_SHEET_SYNC_SECRET: str = os.environ.get(
+        "DIRECTORY_GOOGLE_SHEET_SYNC_SECRET", ""
+    )
+
     @property
     def database_url(self) -> str:
         if self.DATABASE_URL:

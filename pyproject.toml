@@ -18,6 +18,7 @@ dependencies = [
     "ruff>=0.14.11",
     "alembic>=1.13",
     "google-cloud-storage>=2.14",
+    "google-api-python-client>=2.120",
     "python-multipart>=0.0.6",
 ]
 
