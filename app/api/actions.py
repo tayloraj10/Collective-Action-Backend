@@ -73,9 +73,7 @@ def _action_to_schema(a: Action, for_user_id: UUID | None) -> ActionSchema:
     )
 
 
-def _actions_to_schemas(
-    actions: list[Action], for_user_id: UUID | None
-) -> list[ActionSchema]:
+def _actions_to_schemas(actions: list[Action], for_user_id: UUID | None) -> list[ActionSchema]:
     if not actions:
         return []
     return [_action_to_schema(a, for_user_id) for a in actions]
@@ -256,9 +254,7 @@ def get_latest_actions(
 
 
 @router.post("/{action_id}/like", response_model=ActionSchema)
-def add_action_like(
-    action_id: UUID, body: ActionLikeBody, db: Session = Depends(get_db)
-):
+def add_action_like(action_id: UUID, body: ActionLikeBody, db: Session = Depends(get_db)):
     action = db.query(Action).filter(Action.id == action_id).first()
     if not action:
         raise HTTPException(status_code=404, detail="Action not found")
@@ -270,9 +266,7 @@ def add_action_like(
             db.commit()
         except Exception as e:  # noqa: BLE001
             db.rollback()
-            raise HTTPException(
-                status_code=500, detail=f"Failed to add like: {e!s}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Failed to add like: {e!s}") from e
         db.refresh(action)
     return _one_action_to_schema(action, body.user_id)
 
@@ -294,9 +288,7 @@ def remove_action_like(
             db.commit()
         except Exception as e:  # noqa: BLE001
             db.rollback()
-            raise HTTPException(
-                status_code=500, detail=f"Failed to remove like: {e!s}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Failed to remove like: {e!s}") from e
         db.refresh(action)
     return _one_action_to_schema(action, user_id)
 

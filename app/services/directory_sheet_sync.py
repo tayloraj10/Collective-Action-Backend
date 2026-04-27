@@ -45,9 +45,7 @@ def _load_sheets_credentials(credentials_path: str | None):
     path = (credentials_path or "").strip()
     if path:
         if not os.path.isfile(path):
-            raise FileNotFoundError(
-                f"GOOGLE_APPLICATION_CREDENTIALS path does not exist: {path}"
-            )
+            raise FileNotFoundError(f"GOOGLE_APPLICATION_CREDENTIALS path does not exist: {path}")
         return service_account.Credentials.from_service_account_file(path, scopes=SCOPES)
     creds, _ = google_auth_default(scopes=SCOPES)
     return creds
@@ -189,17 +187,13 @@ def _row_to_dict(
     return out
 
 
-def _find_existing(
-    db: Session, name: str, instagram: str | None
-) -> DirectoryOfGood | None:
+def _find_existing(db: Session, name: str, instagram: str | None) -> DirectoryOfGood | None:
     if instagram:
         ig_lower = instagram.lower()
         q = (
             db.query(DirectoryOfGood)
             .filter(DirectoryOfGood.social_links.isnot(None))
-            .filter(
-                func.lower(DirectoryOfGood.social_links["instagram"].as_string()) == ig_lower
-            )
+            .filter(func.lower(DirectoryOfGood.social_links["instagram"].as_string()) == ig_lower)
         )
         hit = q.first()
         if hit:
@@ -235,10 +229,7 @@ def fetch_sheet_values(
     safe_title = title.replace("'", "''")
     range_a1 = f"'{safe_title}'"
     result = (
-        service.spreadsheets()
-        .values()
-        .get(spreadsheetId=spreadsheet_id, range=range_a1)
-        .execute()
+        service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_a1).execute()
     )
     return result.get("values", []) or []
 
