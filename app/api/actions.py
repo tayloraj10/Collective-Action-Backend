@@ -11,11 +11,76 @@ from app.models.action import Action
 from app.models.directory_of_good import DirectoryOfGood
 from app.models.link import Link
 from app.models.map_campaign import MapCampaign
-from app.schemas.action import ActionCreateSchema, ActionPhotosUpdate, ActionSchema
+from app.models.user import User as UserModel
+from app.schemas.action import (
+    ActionCreateSchema,
+    ActionLikeBody,
+    ActionPhotosUpdate,
+    ActionSchema,
+)
 from app.schemas.action_types import ActionTypeValuesEnum
 from app.schemas.event_data import validate_event_data
 
 router = APIRouter(prefix="/actions", tags=["actions"])
+
+
+def _require_active_user_for_like(db: Session, user_id: UUID) -> UserModel:
+    """Likes require a registered user row; anonymous or unknown ids are rejected."""
+    user = db.query(UserModel).filter(UserModel.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=400,
+            detail="User not found; sign in with a registered account to like actions",
+        )
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Inactive users cannot like actions")
+    return user
+
+
+def _like_uuids_from_action(a: Action) -> list[UUID]:
+    """Parse [Action.like_user_ids] JSON: list of uuid strings, newest like first."""
+    raw = a.like_user_ids
+    if not raw:
+        return []
+    out: list[UUID] = []
+    for item in raw:
+        out.append(item if isinstance(item, UUID) else UUID(str(item).strip('"')))
+    return out
+
+
+def _set_like_user_ids(a: Action, uids: list[UUID]) -> None:
+    a.like_user_ids = [str(u) for u in uids]
+
+
+def _action_to_schema(a: Action, for_user_id: UUID | None) -> ActionSchema:
+    uids = _like_uuids_from_action(a)
+    n = len(uids)
+    me = (for_user_id in uids) if for_user_id is not None else False
+    return ActionSchema(
+        id=a.id,
+        action_type=a.action_type,
+        amount=a.amount,
+        date=a.date,
+        image_urls=a.image_urls or [],
+        linked_id=a.linked_id,
+        user_id=a.user_id,
+        latitude=a.latitude,
+        longitude=a.longitude,
+        event_data=a.event_data,
+        like_user_ids=uids,
+        like_count=n,
+        liked_by_me=me,
+    )
+
+
+def _actions_to_schemas(actions: list[Action], for_user_id: UUID | None) -> list[ActionSchema]:
+    if not actions:
+        return []
+    return [_action_to_schema(a, for_user_id) for a in actions]
+
+
+def _one_action_to_schema(a: Action, for_user_id: UUID | None) -> ActionSchema:
+    return _action_to_schema(a, for_user_id)
 
 
 def _initiative_ids_for_map_campaign(db: Session, map_campaign_id: UUID) -> list[UUID]:
@@ -61,6 +126,7 @@ def _create_mirror_actions(
             latitude=db_action.latitude,
             longitude=db_action.longitude,
             event_data=db_action.event_data,
+            like_user_ids=[],
         )
         db.add(initiative_action)
 
@@ -125,15 +191,22 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=500, detail=f"Failed to create action or update initiative: {str(e)}"
         ) from e
-    return db_action
+    return _one_action_to_schema(db_action, None)
 
 
 @router.get("/", response_model=list[ActionSchema])
-def list_actions(db: Session = Depends(get_db), limit: int = None):
+def list_actions(
+    db: Session = Depends(get_db),
+    limit: int = None,
+    for_user_id: UUID | None = Query(
+        default=None, description="If set, each action includes whether this user liked it."
+    ),
+):
     query = db.query(Action).order_by(Action.date.desc())
     if limit is not None:
         query = query.limit(limit)
-    return query.all()
+    rows = query.all()
+    return _actions_to_schemas(rows, for_user_id)
 
 
 _DIRECTORY_OF_GOOD_ACTION_TYPE = "Directory of Good Addition"
@@ -148,7 +221,12 @@ def _is_directory_of_good_action(action_type: str | None) -> bool:
 
 @router.get("/recent", response_model=list[ActionSchema])
 def get_latest_actions(
-    db: Session = Depends(get_db), days: int = 30, action_type: ActionTypeValuesEnum = None
+    db: Session = Depends(get_db),
+    days: int = 30,
+    action_type: ActionTypeValuesEnum = None,
+    for_user_id: UUID | None = Query(
+        default=None, description="If set, each action includes whether this user liked it."
+    ),
 ):
     # Recent actions: featured Directory of Good-linked first; then per day,
     # directory-of-good first, then by date descending.
@@ -172,7 +250,47 @@ def get_latest_actions(
         return (not is_featured_dog, -day_ordinal, not is_dog, -ts)
 
     actions.sort(key=sort_key)
-    return actions
+    return _actions_to_schemas(actions, for_user_id)
+
+
+@router.post("/{action_id}/like", response_model=ActionSchema)
+def add_action_like(action_id: UUID, body: ActionLikeBody, db: Session = Depends(get_db)):
+    action = db.query(Action).filter(Action.id == action_id).first()
+    if not action:
+        raise HTTPException(status_code=404, detail="Action not found")
+    _require_active_user_for_like(db, body.user_id)
+    cur = _like_uuids_from_action(action)
+    if body.user_id not in cur:
+        _set_like_user_ids(action, [body.user_id] + [u for u in cur if u != body.user_id])
+        try:
+            db.commit()
+        except Exception as e:  # noqa: BLE001
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to add like: {e!s}") from e
+        db.refresh(action)
+    return _one_action_to_schema(action, body.user_id)
+
+
+@router.delete("/{action_id}/like", response_model=ActionSchema)
+def remove_action_like(
+    action_id: UUID,
+    user_id: UUID = Query(..., description="Database id of the user unliking the action"),
+    db: Session = Depends(get_db),
+):
+    action = db.query(Action).filter(Action.id == action_id).first()
+    if not action:
+        raise HTTPException(status_code=404, detail="Action not found")
+    _require_active_user_for_like(db, user_id)
+    cur = _like_uuids_from_action(action)
+    if user_id in cur:
+        _set_like_user_ids(action, [u for u in cur if u != user_id])
+        try:
+            db.commit()
+        except Exception as e:  # noqa: BLE001
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to remove like: {e!s}") from e
+        db.refresh(action)
+    return _one_action_to_schema(action, user_id)
 
 
 @router.patch("/{action_id}/photos", response_model=ActionSchema)
@@ -188,15 +306,21 @@ def update_action_photos(
     action.image_urls = payload.image_urls
     db.commit()
     db.refresh(action)
-    return action
+    return _one_action_to_schema(action, None)
 
 
 @router.get("/{action_id}", response_model=ActionSchema)
-def get_action(action_id: UUID, db: Session = Depends(get_db)):
+def get_action(
+    action_id: UUID,
+    db: Session = Depends(get_db),
+    for_user_id: UUID | None = Query(
+        default=None, description="If set, includes whether this user liked the action."
+    ),
+):
     action = db.query(Action).filter(Action.id == action_id).first()
     if not action:
         raise HTTPException(status_code=404, detail="Action not found")
-    return action
+    return _one_action_to_schema(action, for_user_id)
 
 
 @router.get("/by_linked/{linked_id}", response_model=list[ActionSchema])
@@ -204,13 +328,16 @@ def get_actions_by_linked(
     linked_id: UUID,
     db: Session = Depends(get_db),
     days: int | None = Query(None, ge=1, description="Only return actions from the last N days"),
+    for_user_id: UUID | None = Query(
+        default=None, description="If set, each action includes whether this user liked it."
+    ),
 ):
     query = db.query(Action).filter(Action.linked_id == linked_id)
     if days is not None:
         cutoff = datetime.now(UTC) - timedelta(days=days)
         query = query.filter(Action.date >= cutoff)
     actions = query.order_by(Action.date.desc()).all()
-    return actions
+    return _actions_to_schemas(actions, for_user_id)
 
 
 @router.delete("/{action_id}", response_model=ActionSchema)
@@ -218,6 +345,7 @@ def delete_action(action_id: UUID, db: Session = Depends(get_db)):
     action = db.query(Action).filter(Action.id == action_id).first()
     if not action:
         raise HTTPException(status_code=404, detail="Action not found")
+    response_schema = _one_action_to_schema(action, None)
     linked_id = action.linked_id
     db.delete(action)
     db.commit()
@@ -238,4 +366,4 @@ def delete_action(action_id: UUID, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(initiative)
 
-    return action
+    return response_schema
