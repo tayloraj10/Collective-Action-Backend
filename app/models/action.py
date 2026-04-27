@@ -28,6 +28,8 @@ class Action(Base):
     longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     # Optional type-specific payload (e.g. map events; validated by event_data schemas)
     event_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # User ids (users.id) who liked this action, newest-like first. Stored as JSON list of strings.
+    like_user_ids: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     def __repr__(self) -> str:
         return f"<Action id={self.id} action_type={self.action_type} user_id={self.user_id}>"

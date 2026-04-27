@@ -15,6 +15,12 @@ class ActionSchema(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     event_data: dict | None = None
+    like_user_ids: list[uuid.UUID] = Field(
+        default_factory=list,
+        description="Database user ids who liked this action (newest first).",
+    )
+    like_count: int = 0
+    liked_by_me: bool = False
 
     @field_validator("image_urls", mode="before")
     @classmethod
@@ -41,3 +47,13 @@ class ActionCreateSchema(BaseModel):
 
 class ActionPhotosUpdate(BaseModel):
     image_urls: list[str] = Field(default_factory=list, description="List of image URLs")
+
+
+class ActionLikeBody(BaseModel):
+    """Database user id ([users].id) of the account performing the like.
+
+    Likes are not anonymous: the id must refer to an existing, active user row.
+    Clients should only send this after the user has registered / signed in on the app.
+    """
+
+    user_id: uuid.UUID
