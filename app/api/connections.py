@@ -137,7 +137,7 @@ def get_connection_summary(to_type: str, db: Session = Depends(get_db)):
     connections = (
         db.query(Connection)
         .filter(Connection.to_type == to_type)
-        .order_by(Connection.created_at)
+        .order_by(Connection.created_at.desc())
         .all()
     )
 
@@ -151,7 +151,8 @@ def get_connection_summary(to_type: str, db: Session = Depends(get_db)):
         org_conns = [c for c in conns if c.from_type == "directory_of_good"]
 
         preview_users: list[PreviewUserSchema] = []
-        for uc in user_conns[:4]:
+        # Return enough users for UI clusters (5 shown + overflow bubble).
+        for uc in user_conns[:10]:
             user = db.query(User).filter(User.id == uc.created_by).first()
             if user:
                 preview_users.append(
