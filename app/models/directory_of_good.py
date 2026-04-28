@@ -8,7 +8,7 @@ location and social_links over the directory's when user_id is set.
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, Uuid, func
+from sqlalchemy import JSON, Boolean, DateTime, Double, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -40,7 +40,11 @@ class DirectoryOfGood(Base):
     # When linked to a user, prefer user.social_links for display.
     social_links: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
-    # Optional link to user account (when they sign up)
+    # Geocoded coordinates — populated automatically from location.zip_code / location.city.
+    latitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+
+    # Optional link to user account (when they sign up / claim this entry)
     user_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=True
     )

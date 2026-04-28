@@ -16,6 +16,8 @@ class DirectoryOfGoodSchema(BaseModel):
     social_links: SocialLinksSchema | None = None
     user_id: UUID | None = None
     featured: bool = False
+    latitude: float | None = None
+    longitude: float | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 
