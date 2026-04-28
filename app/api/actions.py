@@ -340,6 +340,26 @@ def get_actions_by_linked(
     return _actions_to_schemas(actions, for_user_id)
 
 
+@router.get("/user/{user_id}", response_model=list[ActionSchema])
+def get_actions_by_user(
+    user_id: UUID,
+    db: Session = Depends(get_db),
+    limit: int | None = Query(None, ge=1, description="Maximum number of actions to return"),
+    action_type: ActionTypeValuesEnum | None = Query(None),
+):
+    """All actions submitted by a specific user, newest first."""
+    query = (
+        db.query(Action)
+        .filter(Action.user_id == user_id)
+        .order_by(Action.date.desc())
+    )
+    if action_type:
+        query = query.filter(Action.action_type == action_type)
+    if limit:
+        query = query.limit(limit)
+    return _actions_to_schemas(query.all(), user_id)
+
+
 @router.delete("/{action_id}", response_model=ActionSchema)
 def delete_action(action_id: UUID, db: Session = Depends(get_db)):
     action = db.query(Action).filter(Action.id == action_id).first()
