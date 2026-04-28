@@ -141,18 +141,28 @@ def _build_location(row: dict[str, str]) -> dict[str, str] | None:
     return loc or None
 
 
-def _resolve_category_id(db: Session, category_cell: str | None) -> str | None:
+def _resolve_category_ids(
+    db: Session, category_cell: str | None, errors: list[str]
+) -> list[str]:
+    """Return IDs for all |-separated categories, creating unknown ones on the fly."""
     if not category_cell or not category_cell.strip():
-        return None
+        return []
     parts = [p.strip() for p in category_cell.split("|") if p.strip()]
     if not parts:
-        return None
-    categories = {c.name.lower(): c.id for c in db.query(Category).all()}
+        return []
+
+    categories = {c.name.lower(): c for c in db.query(Category).all()}
+    result: list[str] = []
     for part in parts:
-        cid = categories.get(part.lower())
-        if cid:
-            return str(cid)
-    return None
+        cat = categories.get(part.lower())
+        if cat is None:
+            cat = Category(name=part)
+            db.add(cat)
+            db.flush()
+            categories[part.lower()] = cat
+            errors.append(f"Auto-created new category: '{part}'")
+        result.append(str(cat.id))
+    return result
 
 
 def _parse_header_row(values: list[list[Any]]) -> tuple[dict[int, str], int] | tuple[None, int]:
@@ -271,7 +281,7 @@ def sync_interesting_people(  # noqa: C901
         social = _build_social_links(parsed)
         instagram = social.get("instagram")
         location = _build_location(parsed)
-        category_id = _resolve_category_id(db, parsed.get("category"))
+        category_ids = _resolve_category_ids(db, parsed.get("category"), errors)
         image_url = (parsed.get("image") or "").strip() or None
         focus = (parsed.get("focus") or "").strip() or None
 
@@ -284,7 +294,7 @@ def sync_interesting_people(  # noqa: C901
             entry = DirectoryOfGood(
                 name=name[:255],
                 focus=focus,
-                category_id=category_id,
+                category_ids=category_ids or None,
                 image_url=image_url,
                 location=location,
                 social_links=social or None,
@@ -301,7 +311,7 @@ def sync_interesting_people(  # noqa: C901
         else:
             entry.name = name[:255]
             entry.focus = focus
-            entry.category_id = category_id
+            entry.category_ids = category_ids or None
             entry.image_url = image_url
             entry.location = location
             entry.social_links = social or None

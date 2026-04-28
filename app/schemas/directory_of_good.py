@@ -10,7 +10,7 @@ class DirectoryOfGoodSchema(BaseModel):
     id: UUID | None = None
     name: str
     focus: str | None = None
-    category_id: UUID | None = None
+    category_ids: list[UUID] = []
     image_url: str | None = None
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
@@ -27,7 +27,7 @@ class DirectoryOfGoodSchema(BaseModel):
 class DirectoryOfGoodCreate(BaseModel):
     name: str
     focus: str | None = None
-    category_id: UUID | None = None
+    category_ids: list[UUID] = []
     image_url: str | None = None
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
@@ -37,7 +37,7 @@ class DirectoryOfGoodCreate(BaseModel):
 class DirectoryOfGoodUpdate(BaseModel):
     name: str | None = None
     focus: str | None = None
-    category_id: UUID | None = None
+    category_ids: list[UUID] | None = None
     image_url: str | None = None
     location: LocationSchema | None = None
     social_links: SocialLinksSchema | None = None
