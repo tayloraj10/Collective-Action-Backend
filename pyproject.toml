@@ -20,6 +20,7 @@ dependencies = [
     "google-cloud-storage>=2.14",
     "google-api-python-client>=2.120",
     "python-multipart>=0.0.6",
+    "httpx>=0.25",
 ]
 
 [project.optional-dependencies]

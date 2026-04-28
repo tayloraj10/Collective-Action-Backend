@@ -7,6 +7,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.api.actions import router as actions_router
+from app.api.connections import router as connections_router
+from app.api.image_proxy import router as image_proxy_router
 from app.api.config import action_types_router, categories_router, statuses_router
 from app.api.directory_of_good import router as directory_of_good_router
 from app.api.initiatives import router as initiatives_router
@@ -27,6 +29,7 @@ from app.models import link as _link_model  # noqa: F401
 from app.models import map_campaign as _map_campaign_model  # noqa: F401
 from app.models import project as _project_model  # noqa: F401
 from app.models import status as _status_model  # noqa: F401
+from app.models import connection as _connection_model  # noqa: F401
 from app.models import user as _user_model  # noqa: F401 - ensure models are registered
 
 
@@ -116,6 +119,8 @@ app.include_router(projects_router)
 app.include_router(project_roles_router)
 app.include_router(links_router)
 app.include_router(actions_router)
+app.include_router(connections_router)
+app.include_router(image_proxy_router)
 app.include_router(categories_router)
 app.include_router(statuses_router)
 app.include_router(action_types_router)

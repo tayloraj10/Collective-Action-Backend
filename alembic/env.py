@@ -11,6 +11,7 @@ from app.models import (  # noqa: F401 - imported for Alembic model discovery
     Action,
     ActionTypes,
     Category,
+    Connection,
     DirectoryOfGood,
     Initiative,
     Link,

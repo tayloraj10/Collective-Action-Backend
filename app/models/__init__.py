@@ -1,4 +1,5 @@
 from .action import Action
+from .connection import Connection
 from .action_types import ActionTypes
 from .category import Category
 from .directory_of_good import DirectoryOfGood
@@ -12,6 +13,7 @@ from .user import User
 
 __all__ = [
     "Action",
+    "Connection",
     "ActionTypes",
     "Category",
     "DirectoryOfGood",
