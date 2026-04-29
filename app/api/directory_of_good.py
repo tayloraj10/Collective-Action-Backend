@@ -14,6 +14,7 @@ from app.schemas.directory_of_good import (
     DirectoryOfGoodUpdate,
 )
 from app.services.directory_sheet_sync import SheetSyncResult, sync_interesting_people
+from app.services.geocoding_service import geocode_location
 
 router = APIRouter(prefix="/directory-of-good", tags=["directory-of-good"])
 
@@ -43,15 +44,17 @@ class SheetSyncResponse(BaseModel):
     updated: int
     skipped: int
     rows_seen: int
+    geocoded: int
     errors: list[str]
 
 
 @router.post("/sync-from-google-sheet", response_model=SheetSyncResponse)
-def sync_from_google_sheet(
+async def sync_from_google_sheet(
     db: Session = Depends(get_db),
     x_sync_secret: str | None = Header(None, alias="X-Sync-Secret"),
 ):
-    """Upsert directory rows from the configured 'Interesting People' Google Sheet.
+    """Upsert directory rows from the configured 'Interesting People' Google Sheet,
+    then geocode any entries that are still missing coordinates.
 
     **Credentials:** If ``GOOGLE_APPLICATION_CREDENTIALS`` is set to a service account JSON
     path, that key is used. Otherwise **Application Default Credentials** are used (e.g. Cloud
@@ -71,11 +74,40 @@ def sync_from_google_sheet(
         sheet_gid=settings.DIRECTORY_GOOGLE_SHEET_GID,
         credentials_path=cred_path,
     )
+
+    # Geocode every entry that is still missing coordinates.
+    geocoded = 0
+    if not settings.GOOGLE_MAPS_GEOCODING_API_KEY:
+        result.errors.append("Geocoding skipped: GOOGLE_MAPS_GEOCODING_API_KEY is not set")
+    else:
+        ungeocoded = (
+            db.query(DirectoryOfGood)
+            .filter(DirectoryOfGood.latitude.is_(None))
+            .filter(DirectoryOfGood.location.isnot(None))
+            .all()
+        )
+        geo_failed = 0
+        for entry in ungeocoded:
+            coords = await geocode_location(entry.location)
+            if coords:
+                entry.latitude, entry.longitude = coords
+                geocoded += 1
+            else:
+                geo_failed += 1
+        if geocoded:
+            db.commit()
+        if geo_failed:
+            result.errors.append(
+                f"Geocoding: {geocoded} succeeded, {geo_failed} failed "
+                "(no location data, bad zip, or API error)"
+            )
+
     return SheetSyncResponse(
         created=result.created,
         updated=result.updated,
         skipped=result.skipped,
         rows_seen=result.rows_seen,
+        geocoded=geocoded,
         errors=result.errors,
     )
 

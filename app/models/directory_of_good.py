@@ -8,7 +8,7 @@ location and social_links over the directory's when user_id is set.
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, Uuid, func
+from sqlalchemy import JSON, Boolean, DateTime, Double, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -27,20 +27,24 @@ class DirectoryOfGood(Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     focus: Mapped[str | None] = mapped_column(Text, nullable=True)
-    category_id: Mapped[str | None] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("categories.id"), nullable=True
-    )
+
+    # Stores a JSON list of category ID strings — supports multiple categories per entry.
+    # Replaces the old single category_id FK.
+    category_ids: Mapped[list | None] = mapped_column(JSON, nullable=True)
+
     image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Location: same shape as LocationSchema (city, state, country).
-    # When linked to a user, prefer user.location for display.
     location: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Social: same shape as SocialLinksSchema (youtube, instagram, tiktok, website).
-    # When linked to a user, prefer user.social_links for display.
     social_links: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
-    # Optional link to user account (when they sign up)
+    # Geocoded coordinates — populated automatically from location.zip_code / location.city.
+    latitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+
+    # Optional link to user account (when they sign up / claim this entry)
     user_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id"), unique=True, nullable=True
     )

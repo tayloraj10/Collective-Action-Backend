@@ -38,6 +38,9 @@ class Settings(BaseSettings):
         "DIRECTORY_GOOGLE_SHEET_SYNC_SECRET", ""
     )
 
+    # Google Maps Geocoding API key (server-side; keep separate from the frontend JS key)
+    GOOGLE_MAPS_GEOCODING_API_KEY: str = os.environ.get("GOOGLE_MAPS_GEOCODING_API_KEY", "")
+
     @property
     def database_url(self) -> str:
         if self.DATABASE_URL:

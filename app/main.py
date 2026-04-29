@@ -8,7 +8,9 @@ from pydantic import BaseModel
 
 from app.api.actions import router as actions_router
 from app.api.config import action_types_router, categories_router, statuses_router
+from app.api.connections import router as connections_router
 from app.api.directory_of_good import router as directory_of_good_router
+from app.api.image_proxy import router as image_proxy_router
 from app.api.initiatives import router as initiatives_router
 from app.api.links import router as links_router
 from app.api.map_campaigns import router as map_campaigns_router
@@ -21,6 +23,7 @@ from app.api.users import router as users_router
 from app.models import action as _action_model  # noqa: F401
 from app.models import action_types as _action_types_model  # noqa: F401
 from app.models import category as _category_model  # noqa: F401
+from app.models import connection as _connection_model  # noqa: F401
 from app.models import directory_of_good as _directory_of_good_model  # noqa: F401
 from app.models import initiative as _initiative_model  # noqa: F401
 from app.models import link as _link_model  # noqa: F401
@@ -116,6 +119,8 @@ app.include_router(projects_router)
 app.include_router(project_roles_router)
 app.include_router(links_router)
 app.include_router(actions_router)
+app.include_router(connections_router)
+app.include_router(image_proxy_router)
 app.include_router(categories_router)
 app.include_router(statuses_router)
 app.include_router(action_types_router)
