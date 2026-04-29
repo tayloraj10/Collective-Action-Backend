@@ -57,7 +57,7 @@ jobs:
             --set-env-vars GCS_USER_IMAGES_BUCKET=collective-action-user-images \
             --set-env-vars GCS_SUBMISSIONS_BUCKET=collective-action-submissions \
             --set-env-vars GCS_PROJECT_ID=${{ env.PROJECT_ID }} \
-            --set-secrets DB_PASSWORD=db_password:latest
+            --set-secrets DB_PASSWORD=db_password:latest,GOOGLE_MAPS_GEOCODING_API_KEY=GOOGLE_MAPS_GEOCODING_API_KEY:latest
 
       - name: Get Service URL
         id: get-url
