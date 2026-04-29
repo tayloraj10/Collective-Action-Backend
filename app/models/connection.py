@@ -32,16 +32,12 @@ class Connection(Base):
     #   dog   → initiative = "contribution"
     connection_type: Mapped[str] = mapped_column(String(50), nullable=False, default="contribution")
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     creator: Mapped["User"] = relationship("User", foreign_keys=[created_by])  # noqa: F821
 
     __table_args__ = (
-        UniqueConstraint(
-            "from_type", "from_id", "to_type", "to_id", name="uq_connection_from_to"
-        ),
+        UniqueConstraint("from_type", "from_id", "to_type", "to_id", name="uq_connection_from_to"),
     )
 
     def __repr__(self) -> str:

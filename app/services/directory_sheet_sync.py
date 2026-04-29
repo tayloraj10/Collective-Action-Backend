@@ -141,9 +141,7 @@ def _build_location(row: dict[str, str]) -> dict[str, str] | None:
     return loc or None
 
 
-def _resolve_category_ids(
-    db: Session, category_cell: str | None, errors: list[str]
-) -> list[str]:
+def _resolve_category_ids(db: Session, category_cell: str | None, errors: list[str]) -> list[str]:
     """Return IDs for all |-separated categories, creating unknown ones on the fly."""
     if not category_cell or not category_cell.strip():
         return []

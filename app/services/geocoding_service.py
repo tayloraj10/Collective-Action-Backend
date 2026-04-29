@@ -27,7 +27,7 @@ def _build_address(location: dict | None) -> str | None:
     country = str(location.get("country") or "").strip()
 
     # Prefer zip when it looks like a real zip/postcode (not a city name or junk).
-    if zip_code and len(zip_code) <= 10 and not " " in zip_code:
+    if zip_code and len(zip_code) <= 10 and " " not in zip_code:
         # US zip: just the zip code is unambiguous.
         if _US_ZIP_RE.match(zip_code):
             suffix = f", {country}" if country else ""

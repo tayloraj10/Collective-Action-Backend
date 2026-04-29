@@ -3,8 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-
 # ── Connection types ──────────────────────────────────────────────────────────
+
 
 def infer_connection_type(from_type: str, to_type: str) -> str:
     """Derive the semantic connection type from the entity types."""
@@ -18,11 +18,12 @@ def infer_connection_type(from_type: str, to_type: str) -> str:
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
+
 class ConnectionCreateSchema(BaseModel):
     created_by: uuid.UUID
     from_type: str  # "user" | "directory_of_good"
     from_id: uuid.UUID
-    to_type: str    # "initiative" | "directory_of_good"
+    to_type: str  # "initiative" | "directory_of_good"
     to_id: uuid.UUID
 
 
@@ -51,11 +52,13 @@ class PreviewUserSchema(BaseModel):
 
 class ConnectionWithUserSchema(ConnectionSchema):
     """Connection with the creator's basic profile, used in per-entity listings."""
+
     user: PreviewUserSchema | None = None
 
 
 class ConnectionSummarySchema(BaseModel):
     """Aggregated connection info for one entity — used by the bulk summary endpoint."""
+
     to_id: uuid.UUID
     total_count: int
     user_count: int

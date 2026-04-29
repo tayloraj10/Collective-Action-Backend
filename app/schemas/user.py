@@ -69,8 +69,9 @@ class UserSchema(BaseModel):
 
 class MapCampaignStatsSchema(BaseModel):
     """Stats for a single map campaign the user has submitted to."""
+
     campaign_id: UUID | None = None
-    campaign_name: str = 'Unknown campaign'
+    campaign_name: str = "Unknown campaign"
     submission_count: int = 0
     cleanup_count: int = 0
     trash_report_count: int = 0
@@ -96,7 +97,7 @@ class UserStatsSchema(BaseModel):
     # Breakdown of all actions by type — keys are the action_type strings
     action_type_counts: dict[str, int] = {}
     # Outgoing connections (things this user has connected to)
-    follows_count: int = 0        # orgs they follow
+    follows_count: int = 0  # orgs they follow
     contributions_count: int = 0  # initiatives they've connected to
     # Org-level stats (only populated if user owns a DoG entry)
     org_id: UUID | None = None

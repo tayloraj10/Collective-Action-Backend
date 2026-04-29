@@ -348,11 +348,7 @@ def get_actions_by_user(
     action_type: ActionTypeValuesEnum | None = Query(None),
 ):
     """All actions submitted by a specific user, newest first."""
-    query = (
-        db.query(Action)
-        .filter(Action.user_id == user_id)
-        .order_by(Action.date.desc())
-    )
+    query = db.query(Action).filter(Action.user_id == user_id).order_by(Action.date.desc())
     if action_type:
         query = query.filter(Action.action_type == action_type)
     if limit:

@@ -5,22 +5,22 @@ Revises: d71cc8e63bba
 Create Date: 2026-04-27 20:42:13.027035
 
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'af10745cb1bc'
-down_revision: Union[str, Sequence[str], None] = 'd71cc8e63bba'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "af10745cb1bc"
+down_revision: str | Sequence[str] | None = "d71cc8e63bba"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.add_column('directory_of_good', sa.Column(
-        'category_ids', sa.JSON(), nullable=True))
+    op.add_column("directory_of_good", sa.Column("category_ids", sa.JSON(), nullable=True))
     # Migrate existing single category_id → one-element JSON array.
     op.execute(
         """
@@ -29,14 +29,21 @@ def upgrade() -> None:
         WHERE category_id IS NOT NULL
         """
     )
-    op.drop_constraint(op.f('directory_of_good_category_id_fkey'),
-                       'directory_of_good', type_='foreignkey')
-    op.drop_column('directory_of_good', 'category_id')
+    op.drop_constraint(
+        op.f("directory_of_good_category_id_fkey"), "directory_of_good", type_="foreignkey"
+    )
+    op.drop_column("directory_of_good", "category_id")
 
 
 def downgrade() -> None:
-    op.add_column('directory_of_good', sa.Column(
-        'category_id', sa.UUID(), autoincrement=False, nullable=True))
-    op.create_foreign_key(op.f('directory_of_good_category_id_fkey'),
-                          'directory_of_good', 'categories', ['category_id'], ['id'])
-    op.drop_column('directory_of_good', 'category_ids')
+    op.add_column(
+        "directory_of_good", sa.Column("category_id", sa.UUID(), autoincrement=False, nullable=True)
+    )
+    op.create_foreign_key(
+        op.f("directory_of_good_category_id_fkey"),
+        "directory_of_good",
+        "categories",
+        ["category_id"],
+        ["id"],
+    )
+    op.drop_column("directory_of_good", "category_ids")

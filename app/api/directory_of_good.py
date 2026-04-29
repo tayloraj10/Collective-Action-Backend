@@ -78,9 +78,7 @@ async def sync_from_google_sheet(
     # Geocode every entry that is still missing coordinates.
     geocoded = 0
     if not settings.GOOGLE_MAPS_GEOCODING_API_KEY:
-        result.errors.append(
-            "Geocoding skipped: GOOGLE_MAPS_GEOCODING_API_KEY is not set"
-        )
+        result.errors.append("Geocoding skipped: GOOGLE_MAPS_GEOCODING_API_KEY is not set")
     else:
         ungeocoded = (
             db.query(DirectoryOfGood)
@@ -178,5 +176,3 @@ def delete_entry(entry_id: UUID, db: Session = Depends(get_db)):
     db.delete(entry)
     db.commit()
     return None
-
-

@@ -11,8 +11,13 @@ router = APIRouter(prefix="/image-proxy", tags=["image-proxy"])
 _ALLOWED_SCHEMES = {"http", "https"}
 # Content-types we're willing to proxy.
 _IMAGE_CONTENT_TYPES = {
-    "image/jpeg", "image/png", "image/gif", "image/webp",
-    "image/svg+xml", "image/avif", "image/bmp",
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "image/avif",
+    "image/bmp",
 }
 # Hard cap on response size (5 MB) to prevent abuse.
 _MAX_BYTES = 5 * 1024 * 1024

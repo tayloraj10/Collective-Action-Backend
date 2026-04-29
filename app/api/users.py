@@ -1,3 +1,4 @@
+from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -21,6 +22,94 @@ from app.schemas.user import (
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+def _rollup_map_event_data(ed: dict | None) -> tuple[int, int, int, int, float]:
+    """Per-action map submission tallies: cleanup, trash report, bags, pounds."""
+    ed = ed or {}
+    t = ed.get("type", "")
+    cleanup = 1 if t == "cleanup" else 0
+    trash = 1 if t in ("trashReport", "trash_report") else 0
+    small = int(ed.get("small_bags") or 0)
+    large = int(ed.get("large_bags") or 0)
+    pounds = float(ed.get("pounds") or 0)
+    return cleanup, trash, small, large, pounds
+
+
+def _aggregate_map_submissions(actions: list[Action]) -> tuple[int, int, int, int, float]:
+    cleanup_count = trash_count = small_bags = large_bags = 0
+    total_pounds = 0.0
+    for a in actions:
+        c_add, t_add, s_add, lg_add, p_add = _rollup_map_event_data(a.event_data)
+        cleanup_count += c_add
+        trash_count += t_add
+        small_bags += s_add
+        large_bags += lg_add
+        total_pounds += p_add
+    return cleanup_count, trash_count, small_bags, large_bags, total_pounds
+
+
+def _build_map_campaign_breakdown(
+    db: Session, actions: list[Action]
+) -> list[MapCampaignStatsSchema]:
+    campaign_buckets: dict[str | None, list[Action]] = defaultdict(list)
+    for a in actions:
+        campaign_buckets[str(a.linked_id) if a.linked_id else None].append(a)
+
+    campaign_ids = [cid for cid in campaign_buckets if cid is not None]
+    campaigns_by_id: dict[str, MapCampaign] = {}
+    if campaign_ids:
+        for c in db.query(MapCampaign).filter(MapCampaign.id.in_(campaign_ids)).all():
+            campaigns_by_id[str(c.id)] = c
+
+    map_campaign_breakdown: list[MapCampaignStatsSchema] = []
+    for cid, bucket in campaign_buckets.items():
+        campaign = campaigns_by_id.get(cid) if cid else None
+        c_cleanup = c_trash = c_small = c_large = 0
+        c_pounds = 0.0
+        for a in bucket:
+            dc, dt, ds, dlg, dp = _rollup_map_event_data(a.event_data)
+            c_cleanup += dc
+            c_trash += dt
+            c_small += ds
+            c_large += dlg
+            c_pounds += dp
+        map_campaign_breakdown.append(
+            MapCampaignStatsSchema(
+                campaign_id=campaign.id if campaign else None,
+                campaign_name=campaign.title if campaign else "Unknown campaign",
+                submission_count=len(bucket),
+                cleanup_count=c_cleanup,
+                trash_report_count=c_trash,
+                total_bags=c_small + c_large,
+                total_pounds=c_pounds,
+            )
+        )
+    map_campaign_breakdown.sort(key=lambda x: x.submission_count, reverse=True)
+    return map_campaign_breakdown
+
+
+def _directory_org_connection_counts(
+    db: Session, user_id: UUID, org: DirectoryOfGood
+) -> tuple[int, int, int]:
+    """Followers (incoming user follows), partnerships, initiative connections for a DoG org."""
+    org_conns = (
+        db.query(Connection)
+        .filter(Connection.created_by == user_id, Connection.from_type == "directory_of_good")
+        .all()
+    )
+    org_initiative_conns = sum(1 for c in org_conns if c.connection_type == "contribution")
+    org_partnerships = sum(1 for c in org_conns if c.connection_type == "partnership")
+    org_followers = (
+        db.query(Connection)
+        .filter(
+            Connection.to_type == "directory_of_good",
+            Connection.to_id == org.id,
+            Connection.from_type == "user",
+        )
+        .count()
+    )
+    return org_followers, org_partnerships, org_initiative_conns
 
 
 @router.post("/", response_model=UserSchema)
@@ -134,7 +223,6 @@ def get_user_stats(user_id: UUID, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # ── Map impact ─────────────────────────────────────────────────────────
     actions = (
         db.query(Action)
         .filter(
@@ -143,74 +231,15 @@ def get_user_stats(user_id: UUID, db: Session = Depends(get_db)):
         )
         .all()
     )
-    cleanup_count = trash_count = small_bags = large_bags = 0
-    total_pounds = 0.0
-    for a in actions:
-        ed = a.event_data or {}
-        t = ed.get("type", "")
-        if t == "cleanup":
-            cleanup_count += 1
-        elif t in ("trashReport", "trash_report"):
-            trash_count += 1
-        small_bags += int(ed.get("small_bags") or 0)
-        large_bags += int(ed.get("large_bags") or 0)
-        total_pounds += float(ed.get("pounds") or 0)
-
-    # ── Per-campaign map breakdown ─────────────────────────────────────────
-    from collections import defaultdict
-    campaign_buckets: dict[str | None, list[Action]] = defaultdict(list)
-    for a in actions:
-        campaign_buckets[str(a.linked_id) if a.linked_id else None].append(a)
-
-    # Pre-fetch all relevant campaign names in one query.
-    campaign_ids = [
-        cid for cid in campaign_buckets if cid is not None
-    ]
-    campaigns_by_id: dict[str, MapCampaign] = {}
-    if campaign_ids:
-        for c in db.query(MapCampaign).filter(MapCampaign.id.in_(campaign_ids)).all():
-            campaigns_by_id[str(c.id)] = c
-
-    map_campaign_breakdown: list[MapCampaignStatsSchema] = []
-    for cid, bucket in campaign_buckets.items():
-        campaign = campaigns_by_id.get(cid) if cid else None
-        c_cleanup = c_trash = c_small = c_large = 0
-        c_pounds = 0.0
-        for a in bucket:
-            ed = a.event_data or {}
-            t = ed.get("type", "")
-            if t == "cleanup":
-                c_cleanup += 1
-            elif t in ("trashReport", "trash_report"):
-                c_trash += 1
-            c_small += int(ed.get("small_bags") or 0)
-            c_large += int(ed.get("large_bags") or 0)
-            c_pounds += float(ed.get("pounds") or 0)
-        map_campaign_breakdown.append(
-            MapCampaignStatsSchema(
-                campaign_id=campaign.id if campaign else None,
-                campaign_name=campaign.title if campaign else "Unknown campaign",
-                submission_count=len(bucket),
-                cleanup_count=c_cleanup,
-                trash_report_count=c_trash,
-                total_bags=c_small + c_large,
-                total_pounds=c_pounds,
-            )
-        )
-    # Sort by submission count descending.
-    map_campaign_breakdown.sort(key=lambda x: x.submission_count, reverse=True)
-
-    # ── All actions (for timeline) ─────────────────────────────────────────
-    all_actions = (
-        db.query(Action)
-        .filter(Action.user_id == user_id)
-        .order_by(Action.date)
-        .all()
+    cleanup_count, trash_count, small_bags, large_bags, total_pounds = _aggregate_map_submissions(
+        actions
     )
+    map_campaign_breakdown = _build_map_campaign_breakdown(db, actions)
+
+    all_actions = db.query(Action).filter(Action.user_id == user_id).order_by(Action.date).all()
     first_date = all_actions[0].date if all_actions else None
     last_date = all_actions[-1].date if all_actions else None
 
-    # ── Initiative contribution actions ───────────────────────────────────
     init_actions = (
         db.query(Action)
         .filter(
@@ -224,13 +253,8 @@ def get_user_stats(user_id: UUID, db: Session = Depends(get_db)):
         {str(a.linked_id) for a in init_actions if a.linked_id is not None}
     )
 
-    # ── Action counts by type ──────────────────────────────────────────────
-    from collections import Counter
-    action_type_counts = dict(
-        Counter(a.action_type for a in all_actions if a.action_type)
-    )
+    action_type_counts = dict(Counter(a.action_type for a in all_actions if a.action_type))
 
-    # ── Outgoing connections ───────────────────────────────────────────────
     user_conns = (
         db.query(Connection)
         .filter(Connection.created_by == user_id, Connection.from_type == "user")
@@ -239,29 +263,14 @@ def get_user_stats(user_id: UUID, db: Session = Depends(get_db)):
     follows = sum(1 for c in user_conns if c.connection_type == "follow")
     contributions = sum(1 for c in user_conns if c.connection_type == "contribution")
 
-    # ── Org stats (if user owns a DoG entry) ──────────────────────────────
     org = db.query(DirectoryOfGood).filter(DirectoryOfGood.user_id == user_id).first()
     org_id = org_name = None
     org_followers = org_partnerships = org_initiative_conns = 0
     if org:
         org_id = org.id
         org_name = org.name
-        org_conns = (
-            db.query(Connection)
-            .filter(Connection.created_by == user_id, Connection.from_type == "directory_of_good")
-            .all()
-        )
-        org_initiative_conns = sum(1 for c in org_conns if c.connection_type == "contribution")
-        org_partnerships = sum(1 for c in org_conns if c.connection_type == "partnership")
-        # Followers = connections where someone connected TO this org
-        org_followers = (
-            db.query(Connection)
-            .filter(
-                Connection.to_type == "directory_of_good",
-                Connection.to_id == org.id,
-                Connection.from_type == "user",
-            )
-            .count()
+        org_followers, org_partnerships, org_initiative_conns = _directory_org_connection_counts(
+            db, user_id, org
         )
 
     return UserStatsSchema(
