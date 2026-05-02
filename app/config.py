@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = os.environ.get("DB_PASSWORD", "")
     DATABASE_URL: str = os.environ.get("DATABASE_URL", "")
 
+    # SQLAlchemy pool per process; keep (instances × pool) under Cloud SQL max_connections.
+    DB_POOL_SIZE: int = int(os.environ.get("DB_POOL_SIZE", "3"))
+    DB_MAX_OVERFLOW: int = int(os.environ.get("DB_MAX_OVERFLOW", "5"))
+    DB_POOL_RECYCLE_SECONDS: int = int(os.environ.get("DB_POOL_RECYCLE_SECONDS", "1800"))
+
     # Environment (production = no path prefix; development/testing = prefix for easy cleanup)
     ENVIRONMENT: str = "production"
 
