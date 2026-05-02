@@ -122,6 +122,18 @@ def list_entries(db: Session = Depends(get_db)):
     )
 
 
+@router.get("/bulk", response_model=list[DirectoryOfGoodSchema])
+def get_entries_bulk(ids: str, db: Session = Depends(get_db)):
+    """Get multiple directory of good entries by comma-separated IDs."""
+    try:
+        id_list = [UUID(i.strip()) for i in ids.split(",") if i.strip()]
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid UUID in ids parameter")
+    if not id_list:
+        return []
+    return db.query(DirectoryOfGood).filter(DirectoryOfGood.id.in_(id_list)).all()
+
+
 @router.get("/{entry_id}", response_model=DirectoryOfGoodSchema)
 def get_entry(entry_id: UUID, db: Session = Depends(get_db)):
     """Get a single directory of good entry by ID."""
