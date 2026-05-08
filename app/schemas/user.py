@@ -77,6 +77,9 @@ class MapCampaignStatsSchema(BaseModel):
     trash_report_count: int = 0
     total_bags: int = 0
     total_pounds: float = 0.0
+    tree_planting_count: int = 0
+    wildflower_planting_count: int = 0
+    total_plantings: int = 0
 
 
 class UserStatsSchema(BaseModel):
@@ -89,6 +92,9 @@ class UserStatsSchema(BaseModel):
     total_large_bags: int = 0
     total_bags: int = 0
     total_pounds: float = 0.0
+    tree_planting_count: int = 0
+    wildflower_planting_count: int = 0
+    total_plantings: int = 0
     # Initiative contributions (Action records of type "Initiative")
     initiative_action_count: int = 0  # number of logged contributions
     initiatives_participated: int = 0  # distinct initiatives acted on
