@@ -11,6 +11,8 @@ from app.schemas.event_data import (
     CleanupRouteEventData,
     EventDataBase,
     TrashReportEventData,
+    TreePlantingEventData,
+    WildflowerPlantingEventData,
     ZipCodeSubmissionEventData,
 )
 
@@ -66,6 +68,31 @@ def get_cleanup_route_event_data_schema() -> CleanupRouteEventData:
 )
 def get_zip_code_submission_event_data_schema() -> ZipCodeSubmissionEventData:
     return ZipCodeSubmissionEventData()
+
+
+@router.get(
+    "/event-data/tree_planting",
+    response_model=TreePlantingEventData,
+    summary="TreePlantingEventData schema",
+    description=(
+        "Schema for event_data when action_type is 'tree_planting'. Exposed for OpenAPI/codegen."
+    ),
+)
+def get_tree_planting_event_data_schema() -> TreePlantingEventData:
+    return TreePlantingEventData()
+
+
+@router.get(
+    "/event-data/wildflower_planting",
+    response_model=WildflowerPlantingEventData,
+    summary="WildflowerPlantingEventData schema",
+    description=(
+        "Schema for event_data when action_type is 'wildflower_planting'. "
+        "Exposed for OpenAPI/codegen."
+    ),
+)
+def get_wildflower_planting_event_data_schema() -> WildflowerPlantingEventData:
+    return WildflowerPlantingEventData()
 
 
 @router.get(

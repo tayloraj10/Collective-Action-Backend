@@ -24,29 +24,49 @@ from app.schemas.user import (
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-def _rollup_map_event_data(ed: dict | None) -> tuple[int, int, int, int, float]:
-    """Per-action map submission tallies: cleanup, trash report, bags, pounds."""
+def _rollup_map_event_data(ed: dict | None) -> tuple[int, int, int, int, float, int, int, int]:
+    """Per-action map submission tallies."""
     ed = ed or {}
     t = ed.get("type", "")
-    cleanup = 1 if t == "cleanup" else 0
-    trash = 1 if t in ("trashReport", "trash_report") else 0
+    cleanup = 1 if t in ("cleanup", "Cleanup") else 0
+    trash = 1 if t in ("trashReport", "trash_report", "Trash Report") else 0
     small = int(ed.get("small_bags") or 0)
     large = int(ed.get("large_bags") or 0)
     pounds = float(ed.get("pounds") or 0)
-    return cleanup, trash, small, large, pounds
+    quantity = int(ed.get("quantity") or 1)
+    tree = quantity if t in ("tree_planting", "Tree Planting") else 0
+    wildflower = quantity if t in ("wildflower_planting", "Wildflower Planting") else 0
+    return cleanup, trash, small, large, pounds, tree, wildflower, tree + wildflower
 
 
-def _aggregate_map_submissions(actions: list[Action]) -> tuple[int, int, int, int, float]:
+def _aggregate_map_submissions(
+    actions: list[Action],
+) -> tuple[int, int, int, int, float, int, int, int]:
     cleanup_count = trash_count = small_bags = large_bags = 0
     total_pounds = 0.0
+    tree_count = wildflower_count = total_plantings = 0
     for a in actions:
-        c_add, t_add, s_add, lg_add, p_add = _rollup_map_event_data(a.event_data)
+        c_add, t_add, s_add, lg_add, p_add, tree_add, wild_add, plant_add = _rollup_map_event_data(
+            a.event_data
+        )
         cleanup_count += c_add
         trash_count += t_add
         small_bags += s_add
         large_bags += lg_add
         total_pounds += p_add
-    return cleanup_count, trash_count, small_bags, large_bags, total_pounds
+        tree_count += tree_add
+        wildflower_count += wild_add
+        total_plantings += plant_add
+    return (
+        cleanup_count,
+        trash_count,
+        small_bags,
+        large_bags,
+        total_pounds,
+        tree_count,
+        wildflower_count,
+        total_plantings,
+    )
 
 
 def _build_map_campaign_breakdown(
@@ -67,13 +87,19 @@ def _build_map_campaign_breakdown(
         campaign = campaigns_by_id.get(cid) if cid else None
         c_cleanup = c_trash = c_small = c_large = 0
         c_pounds = 0.0
+        c_tree = c_wildflower = c_total_plantings = 0
         for a in bucket:
-            dc, dt, ds, dlg, dp = _rollup_map_event_data(a.event_data)
+            dc, dt, ds, dlg, dp, d_tree, d_wildflower, d_total_plantings = _rollup_map_event_data(
+                a.event_data
+            )
             c_cleanup += dc
             c_trash += dt
             c_small += ds
             c_large += dlg
             c_pounds += dp
+            c_tree += d_tree
+            c_wildflower += d_wildflower
+            c_total_plantings += d_total_plantings
         map_campaign_breakdown.append(
             MapCampaignStatsSchema(
                 campaign_id=campaign.id if campaign else None,
@@ -83,6 +109,9 @@ def _build_map_campaign_breakdown(
                 trash_report_count=c_trash,
                 total_bags=c_small + c_large,
                 total_pounds=c_pounds,
+                tree_planting_count=c_tree,
+                wildflower_planting_count=c_wildflower,
+                total_plantings=c_total_plantings,
             )
         )
     map_campaign_breakdown.sort(key=lambda x: x.submission_count, reverse=True)
@@ -231,9 +260,16 @@ def get_user_stats(user_id: UUID, db: Session = Depends(get_db)):
         )
         .all()
     )
-    cleanup_count, trash_count, small_bags, large_bags, total_pounds = _aggregate_map_submissions(
-        actions
-    )
+    (
+        cleanup_count,
+        trash_count,
+        small_bags,
+        large_bags,
+        total_pounds,
+        tree_count,
+        wildflower_count,
+        total_plantings,
+    ) = _aggregate_map_submissions(actions)
     map_campaign_breakdown = _build_map_campaign_breakdown(db, actions)
 
     all_actions = db.query(Action).filter(Action.user_id == user_id).order_by(Action.date).all()
@@ -282,6 +318,9 @@ def get_user_stats(user_id: UUID, db: Session = Depends(get_db)):
         total_large_bags=large_bags,
         total_bags=small_bags + large_bags,
         total_pounds=total_pounds,
+        tree_planting_count=tree_count,
+        wildflower_planting_count=wildflower_count,
+        total_plantings=total_plantings,
         initiative_action_count=initiative_action_count,
         initiatives_participated=initiatives_participated,
         map_campaign_breakdown=map_campaign_breakdown,

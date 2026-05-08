@@ -7,6 +7,7 @@ from pydantic import BaseModel
 class MapCampaignTypeEnum(StrEnum):
     cleanup_map = "Cleanup Map"
     zip_code_map = "Zip Code Map"
+    planting_map = "Planting Map"
 
 
 class MapCampaignSchema(BaseModel):

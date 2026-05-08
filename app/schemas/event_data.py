@@ -15,6 +15,8 @@ class EventDataType(StrEnum):
     trash_report = "Trash Report"
     cleanup_route = "Cleanup Route"
     zip_code_submission = "Zip Code Submission"
+    tree_planting = "Tree Planting"
+    wildflower_planting = "Wildflower Planting"
 
 
 # ----- Shared fields (every event_data type has these) -----
@@ -59,12 +61,43 @@ class ZipCodeSubmissionEventData(EventDataBase):
     zip_code: str = ""
 
 
+class PlantingEventData(BaseModel):
+    """Tree or wildflower planting map submission."""
+
+    type: EventDataType
+    name: str = ""
+    location: str = ""
+    planting_type: str = ""
+    species: str = ""
+    quantity: int = 1
+    notes: str = ""
+    image_url: str | None = None
+
+
+class TreePlantingEventData(PlantingEventData):
+    type: EventDataType = EventDataType.tree_planting
+    planting_type: str = "tree"
+
+
+class WildflowerPlantingEventData(PlantingEventData):
+    type: EventDataType = EventDataType.wildflower_planting
+    planting_type: str = "wildflower"
+
+
 # Map action_type to the schema class for validation.
 EVENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "cleanup": CleanupEventData,
+    EventDataType.cleanup.value: CleanupEventData,
     "trash_report": TrashReportEventData,
+    EventDataType.trash_report.value: TrashReportEventData,
     "cleanup_route": CleanupRouteEventData,
+    EventDataType.cleanup_route.value: CleanupRouteEventData,
     "zip_code_submission": ZipCodeSubmissionEventData,
+    EventDataType.zip_code_submission.value: ZipCodeSubmissionEventData,
+    "tree_planting": TreePlantingEventData,
+    EventDataType.tree_planting.value: TreePlantingEventData,
+    "wildflower_planting": WildflowerPlantingEventData,
+    EventDataType.wildflower_planting.value: WildflowerPlantingEventData,
 }
 
 

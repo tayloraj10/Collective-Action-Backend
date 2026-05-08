@@ -19,7 +19,8 @@ from app.schemas.action import (
     ActionSchema,
 )
 from app.schemas.action_types import ActionTypeValuesEnum
-from app.schemas.event_data import validate_event_data
+from app.schemas.event_data import EventDataType, validate_event_data
+from app.schemas.map_campaign import MapCampaignTypeEnum
 
 router = APIRouter(prefix="/actions", tags=["actions"])
 
@@ -70,6 +71,12 @@ def _action_to_schema(a: Action, for_user_id: UUID | None) -> ActionSchema:
         like_user_ids=uids,
         like_count=n,
         liked_by_me=me,
+        # Older ORM / DB rows may predate these fields; keep API responses stable.
+        is_active=getattr(a, "is_active", True),
+        resolved_at=getattr(a, "resolved_at", None),
+        resolved_by_user_id=getattr(a, "resolved_by_user_id", None),
+        resolved_by_action_id=getattr(a, "resolved_by_action_id", None),
+        source_trash_report_id=getattr(a, "source_trash_report_id", None),
     )
 
 
@@ -96,17 +103,60 @@ def _initiative_ids_for_map_campaign(db: Session, map_campaign_id: UUID) -> list
     return list({link.initiative_id for link in links if link.initiative_id is not None})
 
 
+def _should_create_initiative_mirror(db: Session, db_action: Action) -> bool:
+    """Only mirror allowed map submission event types to linked initiatives."""
+    if db_action.linked_id is None or db_action.event_data is None:
+        return False
+
+    campaign = db.query(MapCampaign).filter(MapCampaign.id == db_action.linked_id).first()
+    if not campaign:
+        return False
+
+    event_type = db_action.event_data.get("type")
+    if event_type is None:
+        return False
+
+    # Never mirror trash reports to initiatives.
+    if event_type == EventDataType.trash_report.value:
+        return False
+
+    if campaign.map_campaign_type == MapCampaignTypeEnum.cleanup_map.value:
+        return event_type in (
+            EventDataType.cleanup.value,
+            EventDataType.cleanup_route.value,
+        )
+    if campaign.map_campaign_type == MapCampaignTypeEnum.planting_map.value:
+        return event_type in (
+            EventDataType.tree_planting.value,
+            EventDataType.wildflower_planting.value,
+        )
+    return False
+
+
 def _initiative_amount_for_action(db: Session, db_action: Action) -> float | None:
-    """Cleanup Map: small_bags + large_bags from event_data, else 1; else db_action.amount."""
+    """Map campaign submissions can contribute campaign-specific units to initiatives."""
     if db_action.linked_id is None:
         return db_action.amount
     campaign = db.query(MapCampaign).filter(MapCampaign.id == db_action.linked_id).first()
-    if not campaign or campaign.title != "Cleanup Map" or not db_action.event_data:
+    if not campaign or not db_action.event_data:
         return db_action.amount
-    small = db_action.event_data.get("small_bags")
-    large = db_action.event_data.get("large_bags")
-    total_bags = (small if small is not None else 0) + (large if large is not None else 0)
-    return float(total_bags) if total_bags else 1.0
+    if (
+        campaign.map_campaign_type == MapCampaignTypeEnum.cleanup_map.value
+        or campaign.title == "Cleanup Map"
+    ):
+        small = db_action.event_data.get("small_bags")
+        large = db_action.event_data.get("large_bags")
+        total_bags = (small if small is not None else 0) + (large if large is not None else 0)
+        return float(total_bags) if total_bags else 1.0
+    if campaign.map_campaign_type == MapCampaignTypeEnum.planting_map.value:
+        event_type = db_action.event_data.get("type")
+        if event_type in (
+            EventDataType.tree_planting.value,
+            EventDataType.wildflower_planting.value,
+        ):
+            quantity = db_action.event_data.get("quantity")
+            return float(quantity) if quantity else 1.0
+    return db_action.amount
 
 
 def _create_mirror_actions(
@@ -174,11 +224,9 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
     db.add(db_action)
     try:
         db.flush()
-        initiative_ids = (
-            _initiative_ids_for_map_campaign(db, db_action.linked_id)
-            if db_action.linked_id is not None
-            else []
-        )
+        initiative_ids: list[UUID] = []
+        if _should_create_initiative_mirror(db, db_action):
+            initiative_ids = _initiative_ids_for_map_campaign(db, db_action.linked_id)
         initiative_amount = _initiative_amount_for_action(db, db_action)
         _create_mirror_actions(db, db_action, initiative_ids, initiative_amount)
         db.commit()
