@@ -19,8 +19,8 @@ from app.schemas.action import (
     ActionSchema,
 )
 from app.schemas.action_types import ActionTypeValuesEnum
-from app.schemas.map_campaign import MapCampaignTypeEnum
 from app.schemas.event_data import EventDataType, validate_event_data
+from app.schemas.map_campaign import MapCampaignTypeEnum
 
 router = APIRouter(prefix="/actions", tags=["actions"])
 

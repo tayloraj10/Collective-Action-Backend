@@ -39,7 +39,9 @@ def _rollup_map_event_data(ed: dict | None) -> tuple[int, int, int, int, float, 
     return cleanup, trash, small, large, pounds, tree, wildflower, tree + wildflower
 
 
-def _aggregate_map_submissions(actions: list[Action]) -> tuple[int, int, int, int, float, int, int, int]:
+def _aggregate_map_submissions(
+    actions: list[Action],
+) -> tuple[int, int, int, int, float, int, int, int]:
     cleanup_count = trash_count = small_bags = large_bags = 0
     total_pounds = 0.0
     tree_count = wildflower_count = total_plantings = 0

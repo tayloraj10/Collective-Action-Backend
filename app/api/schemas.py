@@ -75,8 +75,7 @@ def get_zip_code_submission_event_data_schema() -> ZipCodeSubmissionEventData:
     response_model=TreePlantingEventData,
     summary="TreePlantingEventData schema",
     description=(
-        "Schema for event_data when action_type is 'tree_planting'. "
-        "Exposed for OpenAPI/codegen."
+        "Schema for event_data when action_type is 'tree_planting'. Exposed for OpenAPI/codegen."
     ),
 )
 def get_tree_planting_event_data_schema() -> TreePlantingEventData:
