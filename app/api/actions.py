@@ -13,10 +13,13 @@ from app.models.link import Link
 from app.models.map_campaign import MapCampaign
 from app.models.user import User as UserModel
 from app.schemas.action import (
+    ActionClaimCleanedSchema,
     ActionCreateSchema,
     ActionLikeBody,
     ActionPhotosUpdate,
     ActionSchema,
+    ActionUpdateSchema,
+    CleanupParticipationBody,
 )
 from app.schemas.action_types import ActionTypeValuesEnum
 from app.schemas.event_data import EventDataType, validate_event_data
@@ -25,17 +28,26 @@ from app.schemas.map_campaign import MapCampaignTypeEnum
 router = APIRouter(prefix="/actions", tags=["actions"])
 
 
-def _require_active_user_for_like(db: Session, user_id: UUID) -> UserModel:
-    """Likes require a registered user row; anonymous or unknown ids are rejected."""
+def _require_active_user(
+    db: Session,
+    user_id: UUID,
+    action_name: str = "perform this action",
+) -> UserModel:
+    """User-scoped action mutations require a registered active user row."""
     user = db.query(UserModel).filter(UserModel.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=400,
-            detail="User not found; sign in with a registered account to like actions",
+            detail=f"User not found; sign in with a registered account to {action_name}",
         )
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Inactive users cannot like actions")
+        raise HTTPException(status_code=403, detail=f"Inactive users cannot {action_name}")
     return user
+
+
+def _require_active_user_for_like(db: Session, user_id: UUID) -> UserModel:
+    """Likes require a registered user row; anonymous or unknown ids are rejected."""
+    return _require_active_user(db, user_id, "like actions")
 
 
 def _like_uuids_from_action(a: Action) -> list[UUID]:
@@ -53,6 +65,12 @@ def _set_like_user_ids(a: Action, uids: list[UUID]) -> None:
     a.like_user_ids = [str(u) for u in uids]
 
 
+def _event_data_without_nulls(event_data: dict | None) -> dict | None:
+    if event_data is None:
+        return None
+    return {key: value for key, value in event_data.items() if value is not None}
+
+
 def _action_to_schema(a: Action, for_user_id: UUID | None) -> ActionSchema:
     uids = _like_uuids_from_action(a)
     n = len(uids)
@@ -67,16 +85,15 @@ def _action_to_schema(a: Action, for_user_id: UUID | None) -> ActionSchema:
         user_id=a.user_id,
         latitude=a.latitude,
         longitude=a.longitude,
-        event_data=a.event_data,
+        event_data=_event_data_without_nulls(a.event_data),
         like_user_ids=uids,
         like_count=n,
         liked_by_me=me,
-        # Older ORM / DB rows may predate these fields; keep API responses stable.
-        is_active=getattr(a, "is_active", True),
-        resolved_at=getattr(a, "resolved_at", None),
-        resolved_by_user_id=getattr(a, "resolved_by_user_id", None),
-        resolved_by_action_id=getattr(a, "resolved_by_action_id", None),
-        source_trash_report_id=getattr(a, "source_trash_report_id", None),
+        is_active=a.is_active,
+        resolved_at=a.resolved_at,
+        resolved_by_user_id=a.resolved_by_user_id,
+        resolved_by_action_id=a.resolved_by_action_id,
+        source_trash_report_id=a.source_trash_report_id,
     )
 
 
@@ -159,6 +176,40 @@ def _initiative_amount_for_action(db: Session, db_action: Action) -> float | Non
     return db_action.amount
 
 
+def _event_type(action: Action) -> str | None:
+    if not action.event_data:
+        return None
+    return action.event_data.get("type")
+
+
+def _is_cleanup(action: Action) -> bool:
+    return _event_type(action) == EventDataType.cleanup.value
+
+
+def _is_trash_report(action: Action) -> bool:
+    return _event_type(action) == EventDataType.trash_report.value
+
+
+def _require_cleanup_action(db: Session, action_id: UUID) -> Action:
+    action = db.query(Action).filter(Action.id == action_id).first()
+    if not action:
+        raise HTTPException(status_code=404, detail="Cleanup not found")
+    if action.action_type != ActionTypeValuesEnum.map_submission.value or not _is_cleanup(action):
+        raise HTTPException(status_code=400, detail="Action is not a cleanup map submission")
+    return action
+
+
+def _user_ids_from_event_list(event_data: dict, field: str) -> list[UUID]:
+    raw = event_data.get(field) or []
+    return [item if isinstance(item, UUID) else UUID(str(item).strip('"')) for item in raw]
+
+
+def _set_event_user_ids(action: Action, field: str, user_ids: list[UUID]) -> None:
+    data = dict(action.event_data or {})
+    data[field] = [str(user_id) for user_id in user_ids]
+    action.event_data = validate_event_data(action.action_type, data)
+
+
 def _create_mirror_actions(
     db: Session,
     db_action: Action,
@@ -194,7 +245,7 @@ def _update_initiative_completes(
     for iid in to_update:
         total = (
             db.query(Action)
-            .filter(Action.linked_id == iid)
+            .filter(Action.linked_id == iid, Action.is_active.is_(True))
             .with_entities(func.coalesce(func.sum(Action.amount), 0))
             .scalar()
         )
@@ -246,11 +297,14 @@ def create_action(action: ActionCreateSchema, db: Session = Depends(get_db)):
 def list_actions(
     db: Session = Depends(get_db),
     limit: int = None,
+    include_inactive: bool = Query(False, description="Include resolved/inactive actions."),
     for_user_id: UUID | None = Query(
         default=None, description="If set, each action includes whether this user liked it."
     ),
 ):
     query = db.query(Action).order_by(Action.date.desc())
+    if not include_inactive:
+        query = query.filter(Action.is_active.is_(True))
     if limit is not None:
         query = query.limit(limit)
     rows = query.all()
@@ -272,6 +326,7 @@ def get_latest_actions(
     db: Session = Depends(get_db),
     days: int = 30,
     action_type: ActionTypeValuesEnum = None,
+    include_inactive: bool = Query(False, description="Include resolved/inactive actions."),
     for_user_id: UUID | None = Query(
         default=None, description="If set, each action includes whether this user liked it."
     ),
@@ -285,6 +340,8 @@ def get_latest_actions(
     }
 
     query = db.query(Action).filter(Action.date >= cutoff_date)
+    if not include_inactive:
+        query = query.filter(Action.is_active.is_(True))
     if action_type:
         query = query.filter(Action.action_type == action_type)
     actions = query.all()
@@ -357,6 +414,201 @@ def update_action_photos(
     return _one_action_to_schema(action, None)
 
 
+def _require_editable_cleanup(action: Action, user_id: UUID) -> None:
+    if not action.is_active:
+        raise HTTPException(status_code=400, detail="Resolved actions cannot be edited")
+    if action.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Only the submission owner can edit it")
+    if action.action_type != ActionTypeValuesEnum.map_submission.value or not _is_cleanup(action):
+        raise HTTPException(status_code=400, detail="Only cleanup map submissions can be edited")
+
+
+def _apply_action_update(action: Action, payload: ActionUpdateSchema) -> None:
+    if payload.event_data is not None:
+        try:
+            event_data = validate_event_data(action.action_type, payload.event_data)
+        except ValidationError as e:
+            raise HTTPException(status_code=422, detail={"event_data": e.errors()}) from e
+        if event_data and event_data.get("type") != EventDataType.cleanup.value:
+            raise HTTPException(status_code=400, detail="Cleanup edits must keep type Cleanup")
+        action.event_data = event_data
+    updates = {
+        "amount": payload.amount,
+        "image_urls": payload.image_urls,
+        "date": payload.date,
+        "latitude": payload.latitude,
+        "longitude": payload.longitude,
+    }
+    for field, value in updates.items():
+        if value is not None:
+            setattr(action, field, value)
+
+
+@router.patch("/{action_id}", response_model=ActionSchema)
+def update_action(
+    action_id: UUID,
+    payload: ActionUpdateSchema,
+    db: Session = Depends(get_db),
+):
+    """Update a cleanup map submission owned by the requesting user."""
+    _require_active_user(db, payload.user_id, "edit cleanup submissions")
+    action = db.query(Action).filter(Action.id == action_id).first()
+    if not action:
+        raise HTTPException(status_code=404, detail="Action not found")
+    _require_editable_cleanup(action, payload.user_id)
+    _apply_action_update(action, payload)
+
+    try:
+        db.commit()
+        db.refresh(action)
+        if action.linked_id is not None:
+            _update_initiative_completes(db, [], action.linked_id)
+    except Exception as e:  # noqa: BLE001
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to update action: {e!s}") from e
+    return _one_action_to_schema(action, payload.user_id)
+
+
+@router.post("/{trash_report_id}/claim-cleaned", response_model=ActionSchema)
+def claim_trash_report_cleaned(
+    trash_report_id: UUID,
+    payload: ActionClaimCleanedSchema,
+    db: Session = Depends(get_db),
+):
+    """Create a cleanup from an active trash report and resolve the original report."""
+    if payload.user_id is not None:
+        _require_active_user(db, payload.user_id, "claim trash reports")
+    trash_report = db.query(Action).filter(Action.id == trash_report_id).first()
+    if not trash_report:
+        raise HTTPException(status_code=404, detail="Trash report not found")
+    if trash_report.resolved_at is not None or not trash_report.is_active:
+        raise HTTPException(status_code=400, detail="Trash report has already been resolved")
+    if (
+        trash_report.action_type != ActionTypeValuesEnum.map_submission.value
+        or not _is_trash_report(trash_report)
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Only trash report map submissions can be claimed",
+        )
+
+    try:
+        event_data = validate_event_data(
+            ActionTypeValuesEnum.map_submission.value,
+            payload.event_data,
+        )
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail={"event_data": e.errors()}) from e
+    if not event_data or event_data.get("type") != EventDataType.cleanup.value:
+        raise HTTPException(status_code=400, detail="Claim payload must create a Cleanup")
+
+    cleanup = Action(
+        action_type=ActionTypeValuesEnum.map_submission.value,
+        amount=payload.amount,
+        date=payload.date or datetime.now(UTC),
+        image_urls=payload.image_urls or [],
+        linked_id=trash_report.linked_id,
+        user_id=payload.user_id,
+        latitude=payload.latitude if payload.latitude is not None else trash_report.latitude,
+        longitude=payload.longitude if payload.longitude is not None else trash_report.longitude,
+        event_data=event_data,
+        like_user_ids=[],
+        source_trash_report_id=trash_report.id,
+    )
+    db.add(cleanup)
+    try:
+        db.flush()
+        # Keep is_active so the trash report stays in feeds; resolved_at hides it from the map.
+        trash_report.resolved_at = datetime.now(UTC)
+        trash_report.resolved_by_user_id = payload.user_id
+        trash_report.resolved_by_action_id = cleanup.id
+        initiative_ids = (
+            _initiative_ids_for_map_campaign(db, cleanup.linked_id)
+            if cleanup.linked_id is not None
+            else []
+        )
+        initiative_amount = _initiative_amount_for_action(db, cleanup)
+        _create_mirror_actions(db, cleanup, initiative_ids, initiative_amount)
+        db.commit()
+        db.refresh(cleanup)
+        _update_initiative_completes(db, initiative_ids, cleanup.linked_id)
+    except Exception as e:  # noqa: BLE001
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to claim trash report: {e!s}") from e
+    return _one_action_to_schema(cleanup, payload.user_id)
+
+
+@router.get("/{cleanup_id}/rsvps", response_model=list[UUID])
+def list_cleanup_rsvps(cleanup_id: UUID, db: Session = Depends(get_db)):
+    action = _require_cleanup_action(db, cleanup_id)
+    return _user_ids_from_event_list(action.event_data or {}, "rsvp_user_ids")
+
+
+@router.post("/{cleanup_id}/rsvp", response_model=ActionSchema)
+def upsert_cleanup_rsvp(
+    cleanup_id: UUID,
+    payload: CleanupParticipationBody,
+    db: Session = Depends(get_db),
+):
+    action = _require_cleanup_action(db, cleanup_id)
+    _require_active_user(db, payload.user_id, "RSVP to cleanups")
+    user_ids = _user_ids_from_event_list(action.event_data or {}, "rsvp_user_ids")
+    if payload.user_id not in user_ids:
+        _set_event_user_ids(action, "rsvp_user_ids", user_ids + [payload.user_id])
+    try:
+        db.commit()
+        db.refresh(action)
+    except Exception as e:  # noqa: BLE001
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to save RSVP: {e!s}") from e
+    return _one_action_to_schema(action, payload.user_id)
+
+
+@router.delete("/{cleanup_id}/rsvp", response_model=ActionSchema)
+def delete_cleanup_rsvp(
+    cleanup_id: UUID,
+    user_id: UUID = Query(..., description="Database id of the user removing their RSVP"),
+    db: Session = Depends(get_db),
+):
+    action = _require_cleanup_action(db, cleanup_id)
+    _require_active_user(db, user_id, "remove cleanup RSVPs")
+    user_ids = _user_ids_from_event_list(action.event_data or {}, "rsvp_user_ids")
+    _set_event_user_ids(action, "rsvp_user_ids", [uid for uid in user_ids if uid != user_id])
+    try:
+        db.commit()
+        db.refresh(action)
+    except Exception as e:  # noqa: BLE001
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to remove RSVP: {e!s}") from e
+    return _one_action_to_schema(action, user_id)
+
+
+@router.get("/{cleanup_id}/attendance", response_model=list[UUID])
+def list_cleanup_attendance(cleanup_id: UUID, db: Session = Depends(get_db)):
+    action = _require_cleanup_action(db, cleanup_id)
+    return _user_ids_from_event_list(action.event_data or {}, "attended_user_ids")
+
+
+@router.post("/{cleanup_id}/attendance", response_model=ActionSchema)
+def mark_cleanup_attendance(
+    cleanup_id: UUID,
+    payload: CleanupParticipationBody,
+    db: Session = Depends(get_db),
+):
+    action = _require_cleanup_action(db, cleanup_id)
+    _require_active_user(db, payload.user_id, "mark cleanup attendance")
+    user_ids = _user_ids_from_event_list(action.event_data or {}, "attended_user_ids")
+    if payload.user_id not in user_ids:
+        _set_event_user_ids(action, "attended_user_ids", user_ids + [payload.user_id])
+    try:
+        db.commit()
+        db.refresh(action)
+    except Exception as e:  # noqa: BLE001
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to mark attendance: {e!s}") from e
+    return _one_action_to_schema(action, payload.user_id)
+
+
 @router.get("/{action_id}", response_model=ActionSchema)
 def get_action(
     action_id: UUID,
@@ -376,11 +628,14 @@ def get_actions_by_linked(
     linked_id: UUID,
     db: Session = Depends(get_db),
     days: int | None = Query(None, ge=1, description="Only return actions from the last N days"),
+    include_inactive: bool = Query(False, description="Include resolved/inactive actions."),
     for_user_id: UUID | None = Query(
         default=None, description="If set, each action includes whether this user liked it."
     ),
 ):
     query = db.query(Action).filter(Action.linked_id == linked_id)
+    if not include_inactive:
+        query = query.filter(Action.is_active.is_(True))
     if days is not None:
         cutoff = datetime.now(UTC) - timedelta(days=days)
         query = query.filter(Action.date >= cutoff)
@@ -394,9 +649,12 @@ def get_actions_by_user(
     db: Session = Depends(get_db),
     limit: int | None = Query(None, ge=1, description="Maximum number of actions to return"),
     action_type: ActionTypeValuesEnum | None = Query(None),
+    include_inactive: bool = Query(False, description="Include resolved/inactive actions."),
 ):
     """All actions submitted by a specific user, newest first."""
     query = db.query(Action).filter(Action.user_id == user_id).order_by(Action.date.desc())
+    if not include_inactive:
+        query = query.filter(Action.is_active.is_(True))
     if action_type:
         query = query.filter(Action.action_type == action_type)
     if limit:
@@ -420,7 +678,7 @@ def delete_action(action_id: UUID, db: Session = Depends(get_db)):
 
         total = (
             db.query(Action)
-            .filter(Action.linked_id == linked_id)
+            .filter(Action.linked_id == linked_id, Action.is_active.is_(True))
             .with_entities(func.coalesce(func.sum(Action.amount), 0))
             .scalar()
         )

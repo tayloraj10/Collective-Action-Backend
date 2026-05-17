@@ -3,6 +3,8 @@ Pydantic models for type-specific payloads stored in Action.event_data.
 Validate by action_type when creating/updating actions.
 """
 
+import uuid
+from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -33,6 +35,12 @@ class EventDataBase(BaseModel):
 class CleanupEventData(EventDataBase):
     type: EventDataType = EventDataType.cleanup
     location: str = ""
+    scheduled_start: datetime | None = None
+    scheduled_end: datetime | None = None
+    organizer_user_id: uuid.UUID | None = None
+    status: str | None = None
+    rsvp_user_ids: list[uuid.UUID] = Field(default_factory=list)
+    attended_user_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
 # ----- TrashReport -----
@@ -117,7 +125,7 @@ def validate_event_data(action_type: str, data: dict) -> dict | None:
         return data  # unknown type: store as-is
 
     validated = schema_cls.model_validate(data)
-    result = validated.model_dump()
+    result = validated.model_dump(mode="json", exclude_none=True)
     # Ensure type is set (in case it wasn't in input)
     if "type" not in result:
         result["type"] = event_type

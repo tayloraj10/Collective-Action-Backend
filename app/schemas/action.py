@@ -21,6 +21,11 @@ class ActionSchema(BaseModel):
     )
     like_count: int = 0
     liked_by_me: bool = False
+    is_active: bool = True
+    resolved_at: datetime | None = None
+    resolved_by_user_id: uuid.UUID | None = None
+    resolved_by_action_id: uuid.UUID | None = None
+    source_trash_report_id: uuid.UUID | None = None
 
     @field_validator("image_urls", mode="before")
     @classmethod
@@ -43,6 +48,30 @@ class ActionCreateSchema(BaseModel):
     latitude: float | None = None
     longitude: float | None = None
     event_data: dict | None = None
+
+
+class ActionUpdateSchema(BaseModel):
+    user_id: uuid.UUID
+    amount: float | None = None
+    image_urls: list[str] | None = Field(default=None, description="Optional list of image URLs")
+    date: datetime | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    event_data: dict | None = None
+
+
+class ActionClaimCleanedSchema(BaseModel):
+    user_id: uuid.UUID | None = None
+    amount: float = 1
+    image_urls: list[str] | None = Field(default=None, description="Optional list of image URLs")
+    date: datetime | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    event_data: dict
+
+
+class CleanupParticipationBody(BaseModel):
+    user_id: uuid.UUID
 
 
 class ActionPhotosUpdate(BaseModel):
