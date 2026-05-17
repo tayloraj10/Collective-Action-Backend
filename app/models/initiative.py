@@ -13,6 +13,7 @@ class Initiative(Base):
         Uuid(as_uuid=True), primary_key=True, nullable=False, default=uuid.uuid4
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     category_id: Mapped[str | None] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("categories.id"), nullable=True

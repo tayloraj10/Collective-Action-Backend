@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class InitiativeSchema(BaseModel):
     id: uuid.UUID
     title: str
+    description: str | None = None
     action: str
     category_id: uuid.UUID | None = None
     goal: int | None = None
@@ -21,6 +22,7 @@ class InitiativeSchema(BaseModel):
 
 class InitiativeCreateSchema(BaseModel):
     title: str
+    description: str | None = None
     action: str
     created_by: uuid.UUID
     category_id: str | None = None
