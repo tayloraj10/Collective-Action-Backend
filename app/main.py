@@ -23,12 +23,12 @@ from app.api.schemas import router as schemas_router
 from app.api.users import router as users_router
 from app.models import action as _action_model  # noqa: F401
 from app.models import action_types as _action_types_model  # noqa: F401
+from app.models import area_captain as _area_captain_model  # noqa: F401
 from app.models import category as _category_model  # noqa: F401
 from app.models import connection as _connection_model  # noqa: F401
 from app.models import directory_of_good as _directory_of_good_model  # noqa: F401
 from app.models import initiative as _initiative_model  # noqa: F401
 from app.models import link as _link_model  # noqa: F401
-from app.models import area_captain as _area_captain_model  # noqa: F401
 from app.models import map_area as _map_area_model  # noqa: F401
 from app.models import map_campaign as _map_campaign_model  # noqa: F401
 from app.models import map_hotspot as _map_hotspot_model  # noqa: F401

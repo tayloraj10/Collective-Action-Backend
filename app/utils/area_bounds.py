@@ -1,7 +1,9 @@
 from app.schemas.map_area import MapAreaBoundsSchema
 
 
-def point_in_bounds(latitude: float, longitude: float, bounds: dict | MapAreaBoundsSchema | None) -> bool:
+def point_in_bounds(
+    latitude: float, longitude: float, bounds: dict | MapAreaBoundsSchema | None
+) -> bool:
     """Return True if the point falls within [bounds], or False if bounds is missing."""
     if bounds is None:
         return False

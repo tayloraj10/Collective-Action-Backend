@@ -12,7 +12,6 @@ from app.models.map_hotspot import MapHotspot
 from app.models.user import User
 from app.schemas.area_captain import (
     AreaCaptainAssignSchema,
-    AreaCaptainRemoveSchema,
     AreaCaptainSchema,
 )
 from app.schemas.map_area import MapAreaCreateSchema, MapAreaSchema
@@ -264,10 +263,16 @@ def remove_area_captain(
 
     area = _require_area(db, row.map_area_id)
     is_self = row.captain_user_id == acting.id
-    if not _is_admin(acting) and not is_self and not _is_area_captain(db, acting.id, row.map_area_id):
+    if (
+        not _is_admin(acting)
+        and not is_self
+        and not _is_area_captain(db, acting.id, row.map_area_id)
+    ):
         raise HTTPException(
             status_code=403,
-            detail=f"Only {area.name} captains, the assigned user, or an admin can remove this captain",
+            detail=(
+                f"Only {area.name} captains, the assigned user, or an admin can remove this captain"
+            ),
         )
 
     db.delete(row)
